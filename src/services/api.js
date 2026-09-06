@@ -11,7 +11,7 @@ import router from '@/router';
 // déployés sur des domaines différents (ex. Vercel + Render) : VITE_API_BASE_URL
 // doit alors pointer vers l'URL complète du backend (ex.
 // https://sanaa-backend.onrender.com/api/v1), définie au moment du build.
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1' });
+const api = axios.create({ baseURL: 'https://sanaa-api.onrender.com/api/v1' });
 
 api.interceptors.request.use((config) => {
   const token = store.state.auth.accessToken;
