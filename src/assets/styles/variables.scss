@@ -1,0 +1,46 @@
+// Palette SANAA — dérivée du moodboard de marque (nude / crème / champagne / or).
+// Les deux teintes d'accentuation demandées sont conservées comme référence
+// principale ; le reste de la palette (nude, ivoire, cacao) habille le fond et
+// le texte pour rester fidèle à l'identité visuelle sans se limiter à deux teintes.
+:root {
+  --sanaa-accent-1: #CEA77B; // Champagne doré — accent principal
+  --sanaa-accent-2: #B8885E; // Bronze lumineux — accent secondaire / hover
+  --sanaa-accent-1-soft: #E4D2B8;
+  --sanaa-accent-2-dark: #97643E;
+
+  --sanaa-creme-ivoire: #F7F1EA;
+  --sanaa-blanc-casse: #FFFDF9;
+  --sanaa-nude-sable: #EFE1D2;
+  --sanaa-beige-nude: #CEA77B;
+  --sanaa-taupe: #8A7256;
+  --sanaa-brun-cacao: #2C2622;
+  --sanaa-rose-poudre: #E8C9BE;
+
+  --sanaa-bg: var(--sanaa-blanc-casse);
+  --sanaa-bg-alt: var(--sanaa-creme-ivoire);
+  --sanaa-surface: #FFFFFF;
+  --sanaa-border: #E6D8C7;
+  --sanaa-text: var(--sanaa-brun-cacao);
+  --sanaa-text-muted: #6b5d4f;
+  --sanaa-success: #4C8064;
+  --sanaa-warning: #C88A2E;
+  --sanaa-danger: #B4483B;
+  --sanaa-info: #7C8A9A;
+
+  --sanaa-font-display: 'Playfair Display', 'Georgia', serif;
+  --sanaa-font-body: 'Montserrat', 'Segoe UI', sans-serif;
+
+  --sanaa-radius-sm: 6px;
+  --sanaa-radius-md: 10px;
+  --sanaa-radius-lg: 16px;
+  --sanaa-shadow-sm: 0 1px 2px rgba(44, 38, 34, 0.06), 0 1px 3px rgba(44, 38, 34, 0.08);
+  --sanaa-shadow-md: 0 4px 12px rgba(44, 38, 34, 0.08);
+  --sanaa-shadow-lg: 0 12px 32px rgba(44, 38, 34, 0.12);
+
+  --sanaa-sidebar-width: 260px;
+  --sanaa-sidebar-width-collapsed: 72px;
+  --sanaa-topbar-height: 64px;
+}
+
+$accent-1: #CEA77B;
+$accent-2: #B8885E;

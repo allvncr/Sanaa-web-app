@@ -1,0 +1,140 @@
+@import './variables.scss';
+@import './element-theme.scss';
+
+* { box-sizing: border-box; }
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--sanaa-bg);
+  color: var(--sanaa-text);
+  font-family: var(--sanaa-font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .sanaa-font-display {
+  font-family: var(--sanaa-font-display);
+  color: var(--sanaa-text);
+  font-weight: 600;
+  margin: 0;
+}
+
+a { color: var(--sanaa-accent-2); text-decoration: none; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--sanaa-accent-1); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.sanaa-page {
+  padding: 24px;
+  max-width: 100%;
+
+  @media (max-width: 768px) {
+    padding: 14px;
+  }
+}
+
+.sanaa-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  h1 {
+    font-size: 1.5rem;
+  }
+}
+
+.sanaa-card {
+  background: var(--sanaa-surface);
+  border: 1px solid var(--sanaa-border);
+  border-radius: var(--sanaa-radius-lg);
+  box-shadow: var(--sanaa-shadow-sm);
+  padding: 20px;
+
+  @media (max-width: 640px) {
+    padding: 14px;
+    border-radius: var(--sanaa-radius-md);
+  }
+}
+
+.sanaa-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.sanaa-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sanaa-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sanaa-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px;
+  border-radius: var(--sanaa-radius-lg);
+  background: linear-gradient(155deg, var(--sanaa-surface), var(--sanaa-bg-alt));
+  border: 1px solid var(--sanaa-border);
+
+  .sanaa-kpi-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--sanaa-text-muted);
+  }
+  .sanaa-kpi-value {
+    font-family: var(--sanaa-font-display);
+    font-size: 1.6rem;
+    color: var(--sanaa-accent-2-dark);
+  }
+  .sanaa-kpi-sub {
+    font-size: 0.78rem;
+    color: var(--sanaa-text-muted);
+  }
+}
+
+.sanaa-badge-statut {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--sanaa-bg-alt);
+  color: var(--sanaa-text-muted);
+
+  &.is-nouvelle { background: #EFEAE2; color: #6b5d4f; }
+  &.is-confirmee { background: #E6F0EA; color: var(--sanaa-success); }
+  &.is-annulee, &.is-refusee { background: #F5E4E1; color: var(--sanaa-danger); }
+  &.is-en-fabrication, &.is-en-livraison { background: #F3E7D3; color: var(--sanaa-accent-2-dark); }
+  &.is-terminee, &.is-livree { background: #E6F0EA; color: var(--sanaa-success); }
+  &.is-a-produire, &.is-a-expedier, &.is-recue-en-pays { background: #EDEDF2; color: #5c5c78; }
+  &.is-retour-echec, &.is-erreur { background: #F5E4E1; color: var(--sanaa-danger); }
+}
+
+.sanaa-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--sanaa-text-muted);
+}
+
+// Utilitaires responsive
+.hide-mobile { @media (max-width: 768px) { display: none !important; } }
+.hide-desktop { @media (min-width: 769px) { display: none !important; } }

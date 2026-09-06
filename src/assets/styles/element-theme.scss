@@ -1,0 +1,91 @@
+// Surcouche de style SANAA sur Element UI (section 2.1 de l'architecture) :
+// on habille les composants Element UI par défaut avec la palette de marque
+// plutôt que de reconstruire des composants ou de recompiler le thème Element.
+
+.el-button--primary {
+  background-color: var(--sanaa-accent-2);
+  border-color: var(--sanaa-accent-2);
+  &:hover, &:focus {
+    background-color: var(--sanaa-accent-2-dark);
+    border-color: var(--sanaa-accent-2-dark);
+  }
+  &:active { background-color: var(--sanaa-accent-2-dark); border-color: var(--sanaa-accent-2-dark); }
+}
+
+.el-button--text { color: var(--sanaa-accent-2); }
+
+.el-button.is-plain.el-button--primary {
+  color: var(--sanaa-accent-2-dark);
+  background: var(--sanaa-accent-1-soft);
+  border-color: var(--sanaa-accent-1);
+  &:hover { background: var(--sanaa-accent-1); border-color: var(--sanaa-accent-2); color: #fff; }
+}
+
+.el-link.el-link--primary { color: var(--sanaa-accent-2); }
+.el-link.el-link--primary:hover { color: var(--sanaa-accent-2-dark); }
+
+.el-checkbox__input.is-checked .el-checkbox__inner,
+.el-checkbox__input.is-indeterminate .el-checkbox__inner {
+  background-color: var(--sanaa-accent-2);
+  border-color: var(--sanaa-accent-2);
+}
+.el-checkbox__input.is-checked + .el-checkbox__label { color: var(--sanaa-text); }
+
+.el-radio__input.is-checked .el-radio__inner { background-color: var(--sanaa-accent-2); border-color: var(--sanaa-accent-2); }
+.el-radio__input.is-checked + .el-radio__label { color: var(--sanaa-accent-2-dark); }
+
+.el-switch.is-checked .el-switch__core { background-color: var(--sanaa-accent-2); border-color: var(--sanaa-accent-2); }
+
+.el-input__inner:focus, .el-textarea__inner:focus { border-color: var(--sanaa-accent-2); }
+.el-select .el-input.is-focus .el-input__inner { border-color: var(--sanaa-accent-2); }
+
+.el-tabs__item.is-active { color: var(--sanaa-accent-2-dark); }
+.el-tabs__active-bar { background-color: var(--sanaa-accent-2); }
+.el-tabs__item:hover { color: var(--sanaa-accent-2); }
+
+.el-pagination.is-background .el-pager li:not(.disabled).active {
+  background-color: var(--sanaa-accent-2);
+}
+.el-pagination__editor.el-input .el-input__inner:focus { border-color: var(--sanaa-accent-2); }
+
+.el-table th.el-table__cell {
+  background: var(--sanaa-bg-alt);
+  color: var(--sanaa-text);
+  font-family: var(--sanaa-font-body);
+  font-weight: 600;
+}
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: var(--sanaa-bg-alt);
+}
+.el-table__row:hover > td.el-table__cell { background: var(--sanaa-accent-1-soft) !important; }
+
+.el-tag--primary { background: var(--sanaa-accent-1-soft); border-color: var(--sanaa-accent-1); color: var(--sanaa-accent-2-dark); }
+
+.el-menu {
+  background: transparent;
+  border-right: none;
+}
+.el-menu-item, .el-submenu__title {
+  color: var(--sanaa-text-muted);
+  font-family: var(--sanaa-font-body);
+}
+.el-menu-item.is-active {
+  color: var(--sanaa-accent-2-dark) !important;
+  background: var(--sanaa-accent-1-soft) !important;
+  border-radius: var(--sanaa-radius-sm);
+}
+.el-menu-item:hover, .el-submenu__title:hover {
+  background: var(--sanaa-bg-alt) !important;
+}
+
+.el-dialog { border-radius: var(--sanaa-radius-lg); overflow: hidden; }
+.el-dialog__header { background: var(--sanaa-bg-alt); }
+.el-dialog__title { font-family: var(--sanaa-font-display); color: var(--sanaa-text); }
+
+.el-card { border-radius: var(--sanaa-radius-lg); border-color: var(--sanaa-border); }
+
+.el-loading-spinner .path { stroke: var(--sanaa-accent-2); }
+.el-badge__content--danger { background-color: var(--sanaa-danger); }
+
+.el-step__head.is-process, .el-step__title.is-process { color: var(--sanaa-accent-2); border-color: var(--sanaa-accent-2); }
+.el-step__head.is-finish, .el-step__title.is-finish { color: var(--sanaa-accent-2-dark); border-color: var(--sanaa-accent-2-dark); }
