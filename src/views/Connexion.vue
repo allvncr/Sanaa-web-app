@@ -55,7 +55,13 @@ export default {
         const redirect = this.$route.query.redirect || { name: 'dashboard' };
         this.$router.push(redirect);
       } catch (err) {
-        this.erreur = err.response?.data?.error?.message || 'Identifiants invalides';
+        if (err.response) {
+          this.erreur = err.response.data?.error?.message || 'Identifiants invalides';
+        } else {
+          // Pas de réponse du serveur (CORS, backend hors ligne, réseau) — un
+          // message générique "identifiants invalides" serait trompeur ici.
+          this.erreur = "Impossible de joindre le serveur. Vérifiez votre connexion ou réessayez plus tard.";
+        }
       } finally {
         this.chargement = false;
       }
