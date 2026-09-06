@@ -25,8 +25,17 @@ export default {
   modifierProduit(id, data) {
     return api.put(`/produits/${id}`, data);
   },
+  supprimerProduit(id) {
+    return api.delete(`/produits/${id}`);
+  },
   ajouterVariante(id, data) {
     return api.post(`/produits/${id}/variantes`, data);
+  },
+  modifierVariante(produitId, varianteId, data) {
+    return api.put(`/produits/${produitId}/variantes/${varianteId}`, data);
+  },
+  supprimerVariante(produitId, varianteId) {
+    return api.delete(`/produits/${produitId}/variantes/${varianteId}`);
   },
   prixEffectif(id, varianteId, paysId) {
     return api.get(`/produits/${id}/prix`, { params: { variante_id: varianteId, pays_id: paysId } });
