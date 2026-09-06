@@ -38,9 +38,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="" min-width="110">
+        <el-table-column label="" min-width="160">
           <template slot-scope="{ row }">
             <el-button v-if="row.statut !== 'validee'" v-can="'depenses:valider'" size="mini" @click="valider(row)">Valider</el-button>
+            <el-button size="mini" icon="el-icon-delete" circle v-can="'depenses:supprimer'" @click="supprimer(row)" />
           </template>
         </el-table-column>
       </el-table>
@@ -121,6 +122,20 @@ export default {
     async valider(row) {
       await depensesApi.valider(row._id);
       this.charger();
+    },
+    async supprimer(row) {
+      try {
+        await this.$confirm('Supprimer cette dépense ?', 'Confirmation', { type: 'warning' });
+      } catch (e) {
+        return;
+      }
+      try {
+        await depensesApi.supprimer(row._id);
+        this.$store.dispatch('notifications/succes', 'Dépense supprimée.');
+        this.charger();
+      } catch (err) {
+        this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Suppression impossible');
+      }
     },
     // Retour V0.1 : toujours afficher le total de la liste filtrée, pas
     // seulement les lignes individuelles.

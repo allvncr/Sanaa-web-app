@@ -16,4 +16,7 @@ export default {
   valider(id) {
     return api.patch(`/depenses/${id}/valider`);
   },
+  supprimer(id) {
+    return api.delete(`/depenses/${id}`);
+  },
 };
