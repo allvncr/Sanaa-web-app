@@ -101,7 +101,10 @@ export default {
     async charger() {
       this.chargement = true;
       try {
-        const { data } = await exportsApi.lister(this.filtres);
+        const { data } = await exportsApi.lister({
+          type: this.filtres.type || undefined,
+          pays_id: this.filtres.pays_id || undefined,
+        });
         this.exports = data.data;
       } finally {
         this.chargement = false;
