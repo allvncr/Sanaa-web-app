@@ -87,6 +87,10 @@
               <el-form-item label="Prix unitaire (pays)">
                 <el-input :value="ligne.prixUnitaire ? formaterMontant(ligne.prixUnitaire) : 'Aucun prix actif'" disabled />
               </el-form-item>
+
+              <el-form-item label="Précision modèle (optionnel)">
+                <el-input v-model="ligne.detail_variante" placeholder="ex. mois, cheville..." />
+              </el-form-item>
             </div>
 
             <el-form-item label="Prénom(s) / personnalisation à graver">
@@ -166,7 +170,7 @@ import { formaterMontant } from '@/utils/format';
 function ligneVide() {
   return {
     cle: Math.random().toString(36).slice(2),
-    produit_id: '', variante_id: '', couleur_choisie: '',
+    produit_id: '', variante_id: '', couleur_choisie: '', detail_variante: '',
     personnalisation: [{ texte: '', police: '', position: 0 }],
     quantite: 1, prixUnitaire: 0, sousTotal: 0,
   };
@@ -176,7 +180,7 @@ function commandeVide(pays_id) {
   return {
     pays_id,
     client: { nom: '', telephone_whatsapp: '', adresse: '' },
-    canal_vente: 'WhatsApp',
+    canal_vente: 'Site web',
     lignes: [],
     avance: { moyen_paiement: '', montant: 0, reference: '' },
     reduction: 0,
@@ -273,6 +277,7 @@ export default {
             variante_id: l.variante_id,
             couleur_choisie: l.couleur_choisie,
             personnalisation: l.personnalisation.filter((p) => p.texte),
+            detail_variante: l.detail_variante || undefined,
             quantite: l.quantite,
           })),
         };

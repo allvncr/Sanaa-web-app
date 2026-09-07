@@ -4,10 +4,9 @@ export default {
   genererInterne(paysId, date) {
     return api.post('/exports/interne', null, { params: { pays_id: paysId, date } });
   },
-  // Pas de pays_id : l'export usine combine tous les pays d'un même jour
-  // (retour V0.1 — voir export.service.js côté backend).
-  genererUsine(date) {
-    return api.post('/exports/usine', null, { params: { date } });
+  // Retour V0.1 : l'export usine est généré par pays, comme l'export interne.
+  genererUsine(paysId, date) {
+    return api.post('/exports/usine', null, { params: { pays_id: paysId, date } });
   },
   lister(params) {
     return api.get('/exports', { params });

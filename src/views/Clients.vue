@@ -13,7 +13,7 @@
       <el-table :data="clients" stripe @row-click="ouvrirFiche">
         <el-table-column prop="nom" label="Nom" min-width="160" />
         <el-table-column prop="telephone_whatsapp" label="Téléphone" min-width="150" />
-        <el-table-column prop="ville" label="Ville" min-width="120" class-name="hide-mobile" />
+        <el-table-column prop="adresse" label="Adresse" min-width="180" class-name="hide-mobile" />
         <el-table-column label="Créé le" min-width="110" class-name="hide-mobile">
           <template slot-scope="{ row }">{{ row.createdAt | dateFr }}</template>
         </el-table-column>

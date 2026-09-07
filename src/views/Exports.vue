@@ -19,17 +19,17 @@
         </el-button>
       </div>
 
-      <div class="sanaa-card" v-if="estPorteeGlobale">
+      <div class="sanaa-card">
         <h3 style="margin-top:0">Export usine</h3>
-        <p class="sanaa-text-muted">
-          Un seul fichier combinant <strong>tous les pays</strong> du jour, en chinois — l'usine fabrique pour
-          tout le monde à la fois.
-        </p>
+        <p class="sanaa-text-muted">Un fichier par pays, en chinois, pour la fabrication.</p>
         <div class="sanaa-toolbar">
+          <el-select v-model="paysSelectionneUsine" placeholder="Pays" size="small" style="width:180px">
+            <el-option v-for="p in paysContexte.liste" :key="p._id" :value="p._id" :label="p.nom" />
+          </el-select>
           <el-date-picker v-model="dateUsine" type="date" size="small" value-format="yyyy-MM-dd" placeholder="Date des commandes" />
         </div>
         <el-button icon="el-icon-tickets" :loading="generationUsine" @click="genererUsine">
-          Générer l'export usine (tous pays)
+          Générer l'export usine
         </el-button>
       </div>
     </div>
@@ -70,7 +70,7 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from 'vuex';
+import { mapState } from 'vuex';
 import exportsApi from '@/services/exports.api';
 
 export default {
@@ -81,6 +81,7 @@ export default {
       exports: [],
       filtres: { type: '', pays_id: '' },
       paysSelectionne: '',
+      paysSelectionneUsine: '',
       date: new Date().toISOString().slice(0, 10),
       dateUsine: new Date().toISOString().slice(0, 10),
       generationInterne: false,
@@ -89,10 +90,11 @@ export default {
   },
   computed: {
     ...mapState({ paysContexte: (state) => state.paysContexte }),
-    ...mapGetters('auth', { estPorteeGlobale: 'porteeGlobale' }),
   },
   mounted() {
-    this.paysSelectionne = this.paysContexte.paysActifId || (this.paysContexte.liste[0] && this.paysContexte.liste[0]._id) || '';
+    const paysParDefaut = this.paysContexte.paysActifId || (this.paysContexte.liste[0] && this.paysContexte.liste[0]._id) || '';
+    this.paysSelectionne = paysParDefaut;
+    this.paysSelectionneUsine = paysParDefaut;
     this.charger();
   },
   methods: {
@@ -119,10 +121,11 @@ export default {
       }
     },
     async genererUsine() {
+      if (!this.paysSelectionneUsine) return;
       this.generationUsine = true;
       try {
-        await exportsApi.genererUsine(this.dateUsine);
-        this.$store.dispatch('notifications/succes', 'Export usine généré (tous pays).');
+        await exportsApi.genererUsine(this.paysSelectionneUsine, this.dateUsine);
+        this.$store.dispatch('notifications/succes', 'Export usine généré.');
         this.charger();
       } catch (err) {
         this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Échec de la génération');
