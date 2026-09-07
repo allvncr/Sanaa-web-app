@@ -27,6 +27,9 @@
           value-format="yyyy-MM-dd"
           @change="charger"
         />
+        <el-select v-if="estVueGlobale" v-model="deviseAffichage" size="small" style="width:110px" @change="charger">
+          <el-option v-for="d in devises" :key="d._id" :value="d.code" :label="d.code" />
+        </el-select>
       </div>
     </div>
 
@@ -49,35 +52,50 @@
             <span class="sanaa-kpi-label">Bénéfice consolidé</span>
             <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.benefice_converti | montant }}</span>
           </div>
+          <div class="sanaa-kpi">
+            <span class="sanaa-kpi-label">Nouveaux clients</span>
+            <span class="sanaa-kpi-value">{{ nouveauxClients.total || 0 }}</span>
+            <span v-if="deltaClients" class="sanaa-kpi-delta" :class="classeDeltaClients">{{ deltaClients }} {{ libelleComparaison }}</span>
+          </div>
         </div>
 
         <h2 class="sanaa-section-title">Comparaison des pays</h2>
-        <div class="sanaa-card sanaa-table-scroll">
-          <el-table :data="comparaison.pays || []" stripe>
-            <el-table-column prop="pays.nom" label="Pays" min-width="140" />
-            <el-table-column label="CA converti" min-width="130">
-              <template slot-scope="{ row }">{{ row.ca_converti | montant(comparaison.devise_affichage) }}</template>
-            </el-table-column>
-            <el-table-column label="Encaissements" min-width="130">
-              <template slot-scope="{ row }">{{ row.encaissements_convertis | montant(comparaison.devise_affichage) }}</template>
-            </el-table-column>
-            <el-table-column label="Dépenses" min-width="130">
-              <template slot-scope="{ row }">{{ row.depenses_converties | montant(comparaison.devise_affichage) }}</template>
-            </el-table-column>
-            <el-table-column label="Bénéfice" min-width="130">
-              <template slot-scope="{ row }">{{ row.benefice_converti | montant(comparaison.devise_affichage) }}</template>
-            </el-table-column>
-            <el-table-column prop="nombre_commandes" label="Commandes" min-width="110" />
-            <el-table-column label="Taux livraison" min-width="120">
-              <template slot-scope="{ row }">{{ row.taux_livraison_pct }} %</template>
-            </el-table-column>
-            <el-table-column label="Taux retour" min-width="110">
-              <template slot-scope="{ row }">{{ row.taux_retour_pct }} %</template>
-            </el-table-column>
-            <el-table-column label="Taux annulation" min-width="120">
-              <template slot-scope="{ row }">{{ row.taux_annulation_pct }} %</template>
-            </el-table-column>
-          </el-table>
+        <div class="sanaa-grid sanaa-grid--charts">
+          <div class="sanaa-card sanaa-table-scroll" style="grid-column: span 2">
+            <el-table :data="comparaison.pays || []" stripe>
+              <el-table-column prop="pays.nom" label="Pays" min-width="140" />
+              <el-table-column label="CA converti" min-width="130">
+                <template slot-scope="{ row }">{{ row.ca_converti | montant(comparaison.devise_affichage) }}</template>
+              </el-table-column>
+              <el-table-column label="Part du CA" min-width="100">
+                <template slot-scope="{ row }">{{ row.ca_pct }} %</template>
+              </el-table-column>
+              <el-table-column label="Dépenses" min-width="130">
+                <template slot-scope="{ row }">{{ row.depenses_converties | montant(comparaison.devise_affichage) }}</template>
+              </el-table-column>
+              <el-table-column label="Bénéfice" min-width="130">
+                <template slot-scope="{ row }">{{ row.benefice_converti | montant(comparaison.devise_affichage) }}</template>
+              </el-table-column>
+              <el-table-column prop="nombre_commandes" label="Commandes" min-width="110" />
+              <el-table-column label="Taux livraison" min-width="120">
+                <template slot-scope="{ row }">{{ row.taux_livraison_pct }} %</template>
+              </el-table-column>
+              <el-table-column label="Taux retour" min-width="110">
+                <template slot-scope="{ row }">{{ row.taux_retour_pct }} %</template>
+              </el-table-column>
+            </el-table>
+          </div>
+          <div class="sanaa-card">
+            <h3>Part de CA par pays</h3>
+            <apexchart
+              v-if="partCaParPays.length"
+              type="pie"
+              height="260"
+              :options="optionsPartCaParPays"
+              :series="seriePartCaParPays"
+            />
+            <p v-else class="sanaa-empty">Aucune vente sur la période.</p>
+          </div>
         </div>
       </template>
 
@@ -108,17 +126,29 @@
             <span class="sanaa-kpi-sub">Marge {{ kpisData.marge_pct }} %</span>
           </div>
           <div class="sanaa-kpi">
+            <span class="sanaa-kpi-label">Panier moyen</span>
+            <span class="sanaa-kpi-value">{{ panierMoyen | montant(deviseSymbole) }}</span>
+            <span class="sanaa-kpi-sub">{{ kpisData.nombre_commandes }} commande{{ kpisData.nombre_commandes > 1 ? 's' : '' }}</span>
+          </div>
+          <div class="sanaa-kpi">
             <span class="sanaa-kpi-label">Taux de livraison</span>
             <span class="sanaa-kpi-value">{{ kpisData.taux_livraison_pct }} %</span>
             <span class="sanaa-kpi-sub">Annulation {{ kpisData.taux_annulation_pct }} % — Retour {{ kpisData.taux_retour_pct }} %</span>
           </div>
+          <div class="sanaa-kpi">
+            <span class="sanaa-kpi-label">Nouveaux clients</span>
+            <span class="sanaa-kpi-value">{{ nouveauxClients.total || 0 }}</span>
+            <span v-if="deltaClients" class="sanaa-kpi-delta" :class="classeDeltaClients">{{ deltaClients }} {{ libelleComparaison }}</span>
+          </div>
         </div>
+      </template>
 
+      <template v-if="estVueGlobale || kpisData">
         <div class="sanaa-grid sanaa-grid--charts">
           <div class="sanaa-card">
             <h3>Évolution du CA</h3>
             <apexchart
-              v-if="evolutionCA.points && evolutionCA.points.length"
+              v-if="evolutionCA.points && evolutionCA.points.length > 1"
               type="line"
               height="260"
               :options="optionsEvolutionCA"
@@ -161,6 +191,45 @@
             <p v-else class="sanaa-empty">Aucune alerte active.</p>
           </div>
         </div>
+
+        <div class="sanaa-grid sanaa-grid--charts">
+          <div class="sanaa-card">
+            <h3>Canal d'acquisition</h3>
+            <apexchart
+              v-if="repartitionCanal.length"
+              type="donut"
+              height="260"
+              :options="optionsRepartitionCanal"
+              :series="serieRepartitionCanal"
+            />
+            <p v-else class="sanaa-empty">Aucune commande sur la période.</p>
+          </div>
+          <div class="sanaa-card">
+            <h3>Nouveaux clients</h3>
+            <apexchart
+              v-if="nouveauxClients.points && nouveauxClients.points.length > 1"
+              type="bar"
+              height="260"
+              :options="optionsNouveauxClients"
+              :series="serieNouveauxClients"
+            />
+            <p v-else class="sanaa-empty">Pas assez de données sur la période.</p>
+          </div>
+        </div>
+
+        <div class="sanaa-grid sanaa-grid--charts">
+          <div class="sanaa-card" style="grid-column: 1 / -1">
+            <h3>Analyse CA / Publicité / Dépenses</h3>
+            <apexchart
+              v-if="analyseCaPubDepenses.points && analyseCaPubDepenses.points.length > 1"
+              type="line"
+              height="280"
+              :options="optionsAnalyse"
+              :series="serieAnalyse"
+            />
+            <p v-else class="sanaa-empty">Pas assez de données sur la période.</p>
+          </div>
+        </div>
       </template>
     </div>
   </div>
@@ -169,6 +238,7 @@
 <script>
 import { mapState, mapGetters } from 'vuex';
 import dashboardApi from '@/services/dashboard.api';
+import referentielsApi from '@/services/referentiels.api';
 import { formaterMontant } from '@/utils/format';
 
 const LIBELLES_COMPARAISON = {
@@ -178,6 +248,10 @@ const LIBELLES_COMPARAISON = {
   annee: 'vs année précédente',
 };
 
+function videEvolution() {
+  return { points: [] };
+}
+
 export default {
   name: 'Dashboard',
   data() {
@@ -186,11 +260,16 @@ export default {
       periode: 'mois',
       dateJour: new Date().toISOString().slice(0, 10),
       plagePersonnalisee: [],
+      deviseAffichage: 'XOF',
+      devises: [],
       kpisData: null,
       comparaison: {},
       performanceProduits: [],
-      evolutionCA: { points: [] },
+      evolutionCA: videEvolution(),
       repartitionLivraison: [],
+      repartitionCanal: [],
+      nouveauxClients: { total: 0, comparaison: null, points: [] },
+      analyseCaPubDepenses: videEvolution(),
       alertes: [],
     };
   },
@@ -202,6 +281,22 @@ export default {
     },
     libelleComparaison() {
       return LIBELLES_COMPARAISON[this.periode] || '';
+    },
+    panierMoyen() {
+      if (!this.kpisData || !this.kpisData.nombre_commandes) return 0;
+      return Number(this.kpisData.ca.montant) / this.kpisData.nombre_commandes;
+    },
+    deltaClients() {
+      const { total, comparaison } = this.nouveauxClients;
+      if (comparaison === null || comparaison === undefined || !comparaison) return '';
+      const variation = ((total - comparaison) / comparaison) * 100;
+      const signe = variation >= 0 ? '+' : '';
+      return `${signe}${variation.toFixed(1)} %`;
+    },
+    classeDeltaClients() {
+      const { total, comparaison } = this.nouveauxClients;
+      if (comparaison === null || comparaison === undefined) return '';
+      return total >= comparaison ? 'is-hausse' : 'is-baisse';
     },
     serieProduits() {
       return [{ name: 'Chiffre d’affaires', data: this.performanceProduits.map((p) => p.chiffre_affaires) }];
@@ -237,11 +332,65 @@ export default {
         legend: { position: 'bottom' },
       };
     },
+    serieRepartitionCanal() {
+      return this.repartitionCanal.map((r) => r.nombre);
+    },
+    optionsRepartitionCanal() {
+      return {
+        labels: this.repartitionCanal.map((r) => r.canal),
+        colors: ['#CEA77B', '#4C8064'],
+        legend: { position: 'bottom' },
+      };
+    },
+    serieNouveauxClients() {
+      return [{ name: 'Nouveaux clients', data: this.nouveauxClients.points.map((p) => p.nombre) }];
+    },
+    optionsNouveauxClients() {
+      return {
+        chart: { toolbar: { show: false } },
+        colors: ['#4C8064'],
+        xaxis: { categories: this.nouveauxClients.points.map((p) => p.periode) },
+        dataLabels: { enabled: false },
+        plotOptions: { bar: { borderRadius: 4 } },
+      };
+    },
+    serieAnalyse() {
+      return [
+        { name: 'CA', data: this.analyseCaPubDepenses.points.map((p) => p.ca) },
+        { name: 'Publicité', data: this.analyseCaPubDepenses.points.map((p) => p.publicite) },
+        { name: 'Dépenses totales', data: this.analyseCaPubDepenses.points.map((p) => p.depenses) },
+      ];
+    },
+    optionsAnalyse() {
+      return {
+        chart: { toolbar: { show: false } },
+        colors: ['#CEA77B', '#B4483B', '#8a7256'],
+        stroke: { curve: 'smooth', width: 2 },
+        xaxis: { categories: this.analyseCaPubDepenses.points.map((p) => p.periode) },
+        dataLabels: { enabled: false },
+        legend: { position: 'bottom' },
+      };
+    },
+    partCaParPays() {
+      return (this.comparaison.pays || []).filter((p) => Number(p.ca_converti) > 0);
+    },
+    seriePartCaParPays() {
+      return this.partCaParPays.map((p) => Number(p.ca_converti));
+    },
+    optionsPartCaParPays() {
+      return {
+        labels: this.partCaParPays.map((p) => p.pays.nom),
+        colors: ['#CEA77B', '#B8885E', '#4C8064', '#8a7256', '#B4483B'],
+        legend: { position: 'bottom' },
+      };
+    },
   },
   watch: {
     paysActifId() { this.charger(); },
   },
-  mounted() {
+  async mounted() {
+    const { data } = await referentielsApi.listerDevises();
+    this.devises = data.data;
     this.charger();
   },
   methods: {
@@ -277,22 +426,45 @@ export default {
       const params = this.paramsPeriode();
       try {
         if (this.estVueGlobale) {
-          const { data } = await dashboardApi.comparaisonPays(params);
-          this.comparaison = data.data;
+          const communParams = { devise_affichage: this.deviseAffichage, ...params };
+          const [comparaisonRes, perfRes, alertesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes] = await Promise.all([
+            dashboardApi.comparaisonPays(communParams),
+            dashboardApi.performanceProduits(communParams),
+            dashboardApi.alertes({ statut: 'nouvelle' }),
+            dashboardApi.evolutionCA(communParams),
+            dashboardApi.repartitionLivraison(params),
+            dashboardApi.repartitionCanal(params),
+            dashboardApi.nouveauxClients(params),
+            dashboardApi.analyseCaPubDepenses(communParams),
+          ]);
+          this.comparaison = comparaisonRes.data.data;
+          this.performanceProduits = perfRes.data.data;
+          this.alertes = alertesRes.data.data;
+          this.evolutionCA = evolutionRes.data.data;
+          this.repartitionLivraison = repartitionRes.data.data;
+          this.repartitionCanal = canalRes.data.data;
+          this.nouveauxClients = clientsRes.data.data;
+          this.analyseCaPubDepenses = analyseRes.data.data;
         } else {
           const communParams = { pays_id: this.paysActifId, ...params };
-          const [kpisRes, perfRes, alertesRes, evolutionRes, repartitionRes] = await Promise.all([
+          const [kpisRes, perfRes, alertesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes] = await Promise.all([
             dashboardApi.kpis(communParams),
             dashboardApi.performanceProduits(communParams),
             dashboardApi.alertes({ pays_id: this.paysActifId, statut: 'nouvelle' }),
             dashboardApi.evolutionCA(communParams),
             dashboardApi.repartitionLivraison(communParams),
+            dashboardApi.repartitionCanal(communParams),
+            dashboardApi.nouveauxClients(communParams),
+            dashboardApi.analyseCaPubDepenses(communParams),
           ]);
           this.kpisData = kpisRes.data.data;
           this.performanceProduits = perfRes.data.data;
           this.alertes = alertesRes.data.data;
           this.evolutionCA = evolutionRes.data.data;
           this.repartitionLivraison = repartitionRes.data.data;
+          this.repartitionCanal = canalRes.data.data;
+          this.nouveauxClients = clientsRes.data.data;
+          this.analyseCaPubDepenses = analyseRes.data.data;
         }
       } catch (err) {
         this.$store.dispatch('notifications/erreur', 'Impossible de charger le dashboard.');

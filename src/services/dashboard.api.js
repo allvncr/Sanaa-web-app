@@ -16,6 +16,15 @@ export default {
   repartitionLivraison(params) {
     return api.get('/dashboard/repartition-livraison', { params });
   },
+  repartitionCanal(params) {
+    return api.get('/dashboard/repartition-canal', { params });
+  },
+  nouveauxClients(params) {
+    return api.get('/dashboard/nouveaux-clients', { params });
+  },
+  analyseCaPubDepenses(params) {
+    return api.get('/dashboard/analyse-ca-pub-depenses', { params });
+  },
   alertes(params) {
     return api.get('/alertes', { params });
   },
