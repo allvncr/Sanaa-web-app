@@ -20,7 +20,8 @@
     <div class="sanaa-grid sanaa-grid--produits" v-loading="chargement">
       <div v-for="p in produits" :key="p._id" class="sanaa-card produit-card" @click="ouvrir(p)">
         <h3>{{ p.nom }}</h3>
-        <p class="produit-card__zh" :class="{ 'is-manquant': !p.nom_zh }">
+        <p v-if="p.fabrication_locale" class="produit-card__zh">Fabrication locale (non envoyé à l'usine)</p>
+        <p v-else class="produit-card__zh" :class="{ 'is-manquant': !p.nom_zh }">
           {{ p.nom_zh || 'Nom chinois manquant' }}
         </p>
         <p class="produit-card__sku">{{ p.reference_sku || '—' }}</p>
@@ -33,11 +34,19 @@
     <el-dialog title="Nouveau produit" :visible.sync="dialogueProduit" width="480px">
       <el-form :model="nouveauProduit" label-position="top">
         <el-form-item label="Nom (français)" required><el-input v-model="nouveauProduit.nom" /></el-form-item>
-        <el-form-item label="Nom (chinois)" required>
-          <el-input v-model="nouveauProduit.nom_zh" placeholder="名字戒指" />
+        <el-form-item label="Fabrication locale (déjà en stock, pas envoyé à l'usine)">
+          <el-switch v-model="nouveauProduit.fabrication_locale" />
         </el-form-item>
-        <p class="sanaa-text-muted" style="margin-top:-10px">
-          Utilisé comme nom de modèle dans les exports usine, qui ne travaillent qu'en chinois.
+        <template v-if="!nouveauProduit.fabrication_locale">
+          <el-form-item label="Nom (chinois)" required>
+            <el-input v-model="nouveauProduit.nom_zh" placeholder="名字戒指" />
+          </el-form-item>
+          <p class="sanaa-text-muted" style="margin-top:-10px">
+            Utilisé comme nom de modèle dans les exports usine, qui ne travaillent qu'en chinois.
+          </p>
+        </template>
+        <p v-else class="sanaa-text-muted" style="margin-top:-10px">
+          Cet article n'apparaîtra jamais dans l'export usine — pas besoin de nom chinois.
         </p>
         <el-form-item label="Collection">
           <el-select v-model="nouveauProduit.categorie_id" style="width:100%">
@@ -89,7 +98,10 @@
           <el-form-item label="Nom (français)">
             <el-input v-model="produitEnEdition.nom" size="small" />
           </el-form-item>
-          <el-form-item label="Nom (chinois) — utilisé sur les exports usine">
+          <el-form-item label="Fabrication locale (déjà en stock, pas envoyé à l'usine)">
+            <el-switch v-model="produitEnEdition.fabrication_locale" />
+          </el-form-item>
+          <el-form-item v-if="!produitEnEdition.fabrication_locale" label="Nom (chinois) — utilisé sur les exports usine">
             <el-input v-model="produitEnEdition.nom_zh" size="small" placeholder="名字戒指" />
           </el-form-item>
           <el-form-item label="Collection">
@@ -160,10 +172,10 @@ export default {
       recherche: '',
       filtreCategorie: '',
       dialogueProduit: false,
-      nouveauProduit: { nom: '', nom_zh: '', categorie_id: '', reference_sku: '', nb_prenoms_max: 1 },
+      nouveauProduit: { nom: '', nom_zh: '', fabrication_locale: false, categorie_id: '', reference_sku: '', nb_prenoms_max: 1 },
       dialogueDetail: false,
       produitActuel: null,
-      produitEnEdition: { nom: '', nom_zh: '', categorie_id: '', reference_sku: '', nb_prenoms_max: 1, statut: 'actif' },
+      produitEnEdition: { nom: '', nom_zh: '', fabrication_locale: false, categorie_id: '', reference_sku: '', nb_prenoms_max: 1, statut: 'actif' },
       nouvelleCouleur: '',
       nouvelleCouleurZh: '',
       varianteEnEdition: null,
@@ -197,7 +209,7 @@ export default {
         await catalogueApi.creerProduit(payload);
         this.$store.dispatch('notifications/succes', 'Produit créé.');
         this.dialogueProduit = false;
-        this.nouveauProduit = { nom: '', nom_zh: '', categorie_id: '', reference_sku: '', nb_prenoms_max: 1 };
+        this.nouveauProduit = { nom: '', nom_zh: '', fabrication_locale: false, categorie_id: '', reference_sku: '', nb_prenoms_max: 1 };
         this.charger();
       } catch (err) {
         this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Échec de la création');
@@ -209,6 +221,7 @@ export default {
       this.produitEnEdition = {
         nom: data.data.nom,
         nom_zh: data.data.nom_zh || '',
+        fabrication_locale: !!data.data.fabrication_locale,
         categorie_id: data.data.categorie_id ? data.data.categorie_id._id : '',
         reference_sku: data.data.reference_sku || '',
         nb_prenoms_max: data.data.nb_prenoms_max || 1,
