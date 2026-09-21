@@ -8,6 +8,19 @@
     </div>
 
     <div class="sanaa-toolbar">
+      <el-input
+        v-model="filtres.q"
+        class="recherche"
+        size="small"
+        clearable
+        prefix-icon="el-icon-search"
+        placeholder="Rechercher : n° de commande, client, téléphone, prénom gravé…"
+        @input="chargerDiffere"
+        @clear="charger"
+      />
+      <el-select v-model="filtres.creePar" placeholder="Saisi par" clearable filterable size="small" style="width: 190px" @change="charger">
+        <el-option v-for="u in createurs" :key="u._id" :value="u._id" :label="`${u.nom} (${u.total})`" />
+      </el-select>
       <el-select v-model="filtres.statut" placeholder="Statut" clearable size="small" style="width: 160px" @change="charger">
         <el-option v-for="(libelle, val) in statutsCommande" :key="val" :value="val" :label="libelle" />
       </el-select>
@@ -59,6 +72,7 @@
         </el-table-column>
       </el-table>
       <p v-if="!chargement && commandes.length === 0" class="sanaa-empty">Aucune commande trouvée.</p>
+      <p v-else-if="!chargement" class="sanaa-text-muted resultat">{{ commandes.length }} commande{{ commandes.length > 1 ? 's' : '' }}</p>
     </div>
   </div>
 </template>
@@ -75,7 +89,10 @@ export default {
     return {
       chargement: false,
       commandes: [],
-      filtres: { statut: '', plage: [] },
+      filtres: { q: '', creePar: '', statut: '', plage: [] },
+      createurs: [],
+      minuterie: null,
+      requete: 0,
       statutsCommande: this.$i18n.messages.fr.statuts.commande,
       statutsFabrication: this.$i18n.messages.fr.statuts.fabrication,
       statutsLivraison: this.$i18n.messages.fr.statuts.livraison,
@@ -85,25 +102,51 @@ export default {
     ...mapState('paysContexte', { paysActifId: 'paysActifId' }),
   },
   watch: {
-    paysActifId() { this.charger(); },
+    paysActifId() {
+      this.filtres.creePar = '';
+      this.chargerCreateurs();
+      this.charger();
+    },
   },
   mounted() {
+    this.chargerCreateurs();
     this.charger();
   },
+  beforeDestroy() {
+    clearTimeout(this.minuterie);
+  },
   methods: {
+    async chargerCreateurs() {
+      try {
+        const { data } = await commandesApi.createurs({ pays_id: this.paysActifId || undefined });
+        this.createurs = data.data;
+      } catch (e) {
+        this.createurs = [];
+      }
+    },
+    // Recherche à la frappe : on attend une courte pause avant d'interroger le serveur.
+    chargerDiffere() {
+      clearTimeout(this.minuterie);
+      this.minuterie = setTimeout(this.charger, 350);
+    },
     async charger() {
+      clearTimeout(this.minuterie);
+      const numeroRequete = ++this.requete;
       this.chargement = true;
       const [date_de, date_a] = this.filtres.plage && this.filtres.plage.length ? this.filtres.plage : [undefined, undefined];
       try {
         const { data } = await commandesApi.lister({
           pays_id: this.paysActifId || undefined,
+          q: this.filtres.q ? this.filtres.q.trim() : undefined,
+          cree_par: this.filtres.creePar || undefined,
           statut: this.filtres.statut || undefined,
           date_de,
           date_a,
         });
-        this.commandes = data.data;
+        // Réponse périmée (une frappe plus récente a relancé la recherche) : ignorée.
+        if (numeroRequete === this.requete) this.commandes = data.data;
       } finally {
-        this.chargement = false;
+        if (numeroRequete === this.requete) this.chargement = false;
       }
     },
     ouvrir(row) {
@@ -115,4 +158,6 @@ export default {
 
 <style scoped>
 .el-table >>> .el-table__row { cursor: pointer; }
+.recherche { width: 340px; max-width: 100%; }
+.resultat { margin: 10px 0 0; font-size: 0.85rem; color: var(--sanaa-text-muted); }
 </style>

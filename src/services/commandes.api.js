@@ -4,6 +4,9 @@ export default {
   lister(params) {
     return api.get('/commandes', { params });
   },
+  createurs(params) {
+    return api.get('/commandes/createurs', { params });
+  },
   obtenir(id) {
     return api.get(`/commandes/${id}`);
   },

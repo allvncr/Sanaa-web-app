@@ -119,8 +119,8 @@
           <div class="sanaa-grid sanaa-grid--form">
             <div>
               <h3 style="margin-top:0">Avance (optionnel)</h3>
-              <el-form-item label="Moyen de paiement">
-                <el-select v-model="form.avance.moyen_paiement" style="width:100%">
+              <el-form-item label="Moyen de paiement" :required="form.avance.montant > 0" :error="erreurMoyen">
+                <el-select v-model="form.avance.moyen_paiement" placeholder="Wave, Orange Money, Espèces…" style="width:100%" @change="erreurMoyen = ''">
                   <el-option v-for="m in moyensPaiement" :key="m.nom" :value="m.nom" :label="m.nom" />
                 </el-select>
               </el-form-item>
@@ -197,6 +197,7 @@ export default {
       form: commandeVide(''),
       moyensPaiement: [],
       enregistrement: false,
+      erreurMoyen: '',
     };
   },
   computed: {
@@ -264,6 +265,12 @@ export default {
         this.$store.dispatch('notifications/erreur', 'Numéro de téléphone du client et au moins une ligne sont requis.');
         return;
       }
+      if (this.form.avance.montant > 0 && !this.form.avance.moyen_paiement) {
+        this.erreurMoyen = "Choisissez le moyen de paiement de l'avance.";
+        this.$store.dispatch('notifications/erreur', 'Une avance est saisie : choisissez son moyen de paiement (Wave, Orange Money, Espèces…).');
+        return;
+      }
+      this.erreurMoyen = '';
       this.enregistrement = true;
       try {
         const payload = {
