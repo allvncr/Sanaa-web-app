@@ -40,6 +40,9 @@ export default {
   prixEffectif(id, varianteId, paysId) {
     return api.get(`/produits/${id}/prix`, { params: { variante_id: varianteId, pays_id: paysId } });
   },
+  definirPrixPaysEnLot(paysId, prix) {
+    return api.put(`/prix-lot/${paysId}`, { prix });
+  },
   definirPrixPays(varianteId, paysId, data) {
     return api.put(`/variantes/${varianteId}/prix/${paysId}`, data);
   },
