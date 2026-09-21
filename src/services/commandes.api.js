@@ -13,6 +13,12 @@ export default {
   modifier(id, data) {
     return api.put(`/commandes/${id}`, data);
   },
+  supprimer(id, { confirmerPaiements = false } = {}) {
+    return api.delete(`/commandes/${id}`, { params: confirmerPaiements ? { confirmer_paiements: true } : {} });
+  },
+  historique(id) {
+    return api.get(`/commandes/${id}/historique`);
+  },
   changerStatutCommande(id, statut) {
     return api.patch(`/commandes/${id}/statut-commande`, { statut });
   },

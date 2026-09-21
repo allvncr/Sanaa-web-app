@@ -3,7 +3,11 @@
     <template v-if="commande">
       <div class="sanaa-page-header">
         <h1>Commande {{ commande.numero }}</h1>
-        <el-button icon="el-icon-back" @click="$router.push({ name: 'commandes' })">Retour</el-button>
+        <div class="entete-actions">
+          <el-button v-can="'commandes:modifier'" type="primary" icon="el-icon-edit" @click="dialogueEdition = true">Modifier</el-button>
+          <el-button v-can="'commandes:supprimer'" type="danger" plain icon="el-icon-delete" :loading="suppression" @click="supprimerCommande">Supprimer</el-button>
+          <el-button icon="el-icon-back" @click="$router.push({ name: 'commandes' })">Retour</el-button>
+        </div>
       </div>
 
       <div class="sanaa-grid sanaa-grid--statuts">
@@ -79,6 +83,12 @@
         <div class="sanaa-card sanaa-table-scroll">
           <h3 style="margin-top:0">Lignes</h3>
           <el-table :data="commande.lignes" size="small">
+            <el-table-column label="Produit" min-width="180">
+              <template slot-scope="{ row }">
+                {{ row.produit_id && row.produit_id.nom ? row.produit_id.nom : '—' }}
+                <span v-if="row.detail_variante" class="sanaa-text-muted">({{ row.detail_variante }})</span>
+              </template>
+            </el-table-column>
             <el-table-column label="Couleur" prop="couleur_choisie" min-width="100" />
             <el-table-column label="Personnalisation" min-width="160">
               <template slot-scope="{ row }">{{ (row.personnalisation || []).map(p => p.texte).join(', ') }}</template>
@@ -117,6 +127,10 @@
         </div>
       </div>
 
+      <CommandeHistorique :commande-id="id" :version="versionHistorique" style="margin-top:16px" />
+
+      <CommandeEditDialog :visible.sync="dialogueEdition" :commande="commande" @saved="charger" />
+
       <el-dialog title="Enregistrer un paiement" :visible.sync="dialoguePaiement" width="420px">
         <el-form :model="nouveauPaiement" label-position="top">
           <el-form-item label="Type">
@@ -147,6 +161,8 @@
 <script>
 import commandesApi from '@/services/commandes.api';
 import StatutBadge from '@/components/common/StatutBadge.vue';
+import CommandeEditDialog from '@/components/commandes/CommandeEditDialog.vue';
+import CommandeHistorique from '@/components/commandes/CommandeHistorique.vue';
 
 const TRANSITIONS = {
   Nouvelle: ['Confirmee', 'Annulee', 'Refusee'],
@@ -157,7 +173,7 @@ const TRANSITIONS = {
 
 export default {
   name: 'CommandeDetail',
-  components: { StatutBadge },
+  components: { StatutBadge, CommandeEditDialog, CommandeHistorique },
   props: { id: { type: String, required: true } },
   data() {
     return {
@@ -167,6 +183,9 @@ export default {
       nouveauStatutFabrication: '',
       nouveauStatutLivraison: '',
       dialoguePaiement: false,
+      dialogueEdition: false,
+      suppression: false,
+      versionHistorique: 0,
       nouveauPaiement: { type: 'solde', moyen_paiement: '', montant: 0, reference: '' },
       enregistrementPaiement: false,
       statutsCommande: this.$i18n.messages.fr.statuts.commande,
@@ -202,8 +221,34 @@ export default {
       try {
         const { data } = await commandesApi.obtenir(this.id);
         this.commande = data.data;
+        this.versionHistorique += 1;
       } finally {
         this.chargement = false;
+      }
+    },
+    async supprimerCommande() {
+      const paiements = this.commande.paiements.filter((p) => !p.annule);
+      const avertissementPaiements = paiements.length
+        ? ` Elle contient ${paiements.length} paiement(s) enregistré(s) qui seront supprimés avec elle.`
+        : '';
+      try {
+        await this.$confirm(
+          `Supprimer définitivement la commande ${this.commande.numero} ?${avertissementPaiements} Le stock réservé sera libéré ; la suppression restera tracée dans le journal d'activité.`,
+          'Suppression de la commande',
+          { type: 'warning', confirmButtonText: 'Supprimer', cancelButtonText: 'Annuler', confirmButtonClass: 'el-button--danger' }
+        );
+      } catch (e) {
+        return;
+      }
+      this.suppression = true;
+      try {
+        await commandesApi.supprimer(this.id, { confirmerPaiements: paiements.length > 0 });
+        this.$store.dispatch('notifications/succes', `Commande ${this.commande.numero} supprimée.`);
+        this.$router.push({ name: 'commandes' });
+      } catch (err) {
+        this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Échec de la suppression');
+      } finally {
+        this.suppression = false;
       }
     },
     async changerStatutCommande(statut) {
@@ -258,6 +303,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.entete-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sanaa-grid--statuts { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 16px; }
 .sanaa-grid--2col { grid-template-columns: 1fr 2fr; @media (max-width: 900px) { grid-template-columns: 1fr; } }
 .sanaa-text-muted { color: var(--sanaa-text-muted); font-size: 0.85rem; }

@@ -54,6 +54,9 @@
         <el-table-column label="Date" min-width="110" class-name="hide-mobile">
           <template slot-scope="{ row }">{{ row.createdAt | dateFr }}</template>
         </el-table-column>
+        <el-table-column label="Saisie par" min-width="130" class-name="hide-mobile">
+          <template slot-scope="{ row }">{{ row.cree_par && row.cree_par.nom ? row.cree_par.nom : '—' }}</template>
+        </el-table-column>
       </el-table>
       <p v-if="!chargement && commandes.length === 0" class="sanaa-empty">Aucune commande trouvée.</p>
     </div>
