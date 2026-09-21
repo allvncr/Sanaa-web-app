@@ -145,11 +145,17 @@ export default {
   display: flex;
   flex-direction: column;
   transition: width 0.2s ease;
-  position: relative;
+  // Fixée à la hauteur de la fenêtre : le menu défile à l'intérieur et le bouton
+  // Réduire/Développer reste toujours visible, quelle que soit la longueur de la page.
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
 
   &.is-collapsed { width: var(--sanaa-sidebar-width-collapsed); }
 
   @media (max-width: 768px) {
+    height: auto;
     position: fixed;
     inset: 0 auto 0 0;
     z-index: 220;

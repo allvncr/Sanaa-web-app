@@ -58,10 +58,26 @@
         <div class="sanaa-card" style="margin-bottom:16px">
           <div class="sanaa-toolbar" style="justify-content: space-between;">
             <h3 style="margin:0">Lignes de commande</h3>
-            <el-button size="small" icon="el-icon-plus" @click="ajouterLigne">Ajouter un produit</el-button>
+            <div>
+              <el-button v-if="form.lignes.length > 1" size="small" type="text" @click="basculerToutesLignes">
+                {{ toutesRepliees ? 'Tout déplier' : 'Tout replier' }}
+              </el-button>
+              <el-button size="small" icon="el-icon-plus" @click="ajouterLigne">Ajouter un produit</el-button>
+            </div>
           </div>
 
-          <div v-for="(ligne, index) in form.lignes" :key="ligne.cle" class="ligne-commande">
+          <div v-for="(ligne, index) in form.lignes" :key="ligne.cle" class="ligne-commande" :class="{ 'is-replie': ligne.replie }">
+            <div class="ligne-commande__entete">
+              <button type="button" class="ligne-commande__bascule" @click="ligne.replie = !ligne.replie">
+                <i :class="ligne.replie ? 'el-icon-arrow-right' : 'el-icon-arrow-down'" />
+                <span class="ligne-commande__titre">Produit {{ index + 1 }}</span>
+                <span class="ligne-commande__resume">{{ resumeLigne(ligne) }}</span>
+              </button>
+              <span class="ligne-commande__total">{{ ligne.sousTotal | montant }}</span>
+              <el-button type="text" icon="el-icon-delete" title="Retirer la ligne" @click="form.lignes.splice(index, 1)" />
+            </div>
+            <el-collapse-transition>
+            <div v-show="!ligne.replie" class="ligne-commande__corps">
             <div class="sanaa-grid sanaa-grid--ligne">
               <el-form-item label="Produit">
                 <el-select v-model="ligne.produit_id" filterable placeholder="Produit" style="width:100%" @change="() => onChangeProduit(ligne)">
@@ -108,17 +124,24 @@
 
             <div class="ligne-commande__pied">
               <span>Sous-total : <strong>{{ ligne.sousTotal | montant }}</strong></span>
-              <el-button type="text" icon="el-icon-delete" @click="form.lignes.splice(index, 1)">Retirer la ligne</el-button>
             </div>
+            </div>
+            </el-collapse-transition>
           </div>
 
           <p v-if="form.lignes.length === 0" class="sanaa-empty">Ajoutez au moins un produit à la commande.</p>
         </div>
 
         <div class="sanaa-card" style="margin-bottom:16px">
-          <div class="sanaa-grid sanaa-grid--form">
+          <button type="button" class="bloc-optionnel__bascule" @click="blocPaiementOuvert = !blocPaiementOuvert">
+            <i :class="blocPaiementOuvert ? 'el-icon-arrow-down' : 'el-icon-arrow-right'" />
+            <h3>Avance et réduction <span class="sanaa-text-muted">(optionnel)</span></h3>
+            <span v-if="!blocPaiementOuvert && resumePaiement" class="bloc-optionnel__resume">{{ resumePaiement }}</span>
+          </button>
+          <el-collapse-transition>
+          <div v-show="blocPaiementOuvert" class="sanaa-grid sanaa-grid--form" style="margin-top:14px">
             <div>
-              <h3 style="margin-top:0">Avance (optionnel)</h3>
+              <h3 style="margin-top:0">Avance</h3>
               <el-form-item label="Moyen de paiement" :required="form.avance.montant > 0" :error="erreurMoyen">
                 <el-select v-model="form.avance.moyen_paiement" placeholder="Wave, Orange Money, Espèces…" style="width:100%" @change="erreurMoyen = ''">
                   <el-option v-for="m in moyensPaiement" :key="m.nom" :value="m.nom" :label="m.nom" />
@@ -132,13 +155,14 @@
               </el-form-item>
             </div>
             <div>
-              <h3 style="margin-top:0">Réduction (optionnel)</h3>
+              <h3 style="margin-top:0">Réduction</h3>
               <el-form-item label="Montant de la réduction sur le total">
                 <el-input-number v-model="form.reduction" :min="0" style="width:100%" />
               </el-form-item>
               <p class="sanaa-text-muted">Déduite du total de la commande pour le calcul du reste à payer.</p>
             </div>
           </div>
+          </el-collapse-transition>
         </div>
 
         <el-form-item label="Commentaires">
@@ -172,7 +196,7 @@ function ligneVide() {
     cle: Math.random().toString(36).slice(2),
     produit_id: '', variante_id: '', couleur_choisie: '', detail_variante: '',
     personnalisation: [{ texte: '', police: '', position: 0 }],
-    quantite: 1, prixUnitaire: 0, sousTotal: 0,
+    quantite: 1, prixUnitaire: 0, sousTotal: 0, replie: false,
   };
 }
 
@@ -198,6 +222,7 @@ export default {
       moyensPaiement: [],
       enregistrement: false,
       erreurMoyen: '',
+      blocPaiementOuvert: false,
     };
   },
   computed: {
@@ -205,6 +230,16 @@ export default {
     ...mapState('catalogue', ['produits']),
     paysActuel() {
       return this.paysContexte.liste.find((p) => p._id === this.form.pays_id) || null;
+    },
+    toutesRepliees() {
+      return this.form.lignes.length > 0 && this.form.lignes.every((l) => l.replie);
+    },
+    // Rappel affiché quand le bloc optionnel est replié mais renseigné.
+    resumePaiement() {
+      const morceaux = [];
+      if (this.form.avance.montant > 0) morceaux.push(`Avance ${formaterMontant(this.form.avance.montant)}${this.form.avance.moyen_paiement ? ` (${this.form.avance.moyen_paiement})` : ' — moyen à choisir'}`);
+      if (this.form.reduction > 0) morceaux.push(`Réduction ${formaterMontant(this.form.reduction)}`);
+      return morceaux.join(' · ');
     },
     totalCommande() {
       return this.form.lignes.reduce((acc, l) => acc + (Number(l.sousTotal) || 0), 0);
@@ -236,6 +271,19 @@ export default {
       const produit = this.produits.find((p) => p._id === produitId);
       return produit ? produit.variantes : [];
     },
+    basculerToutesLignes() {
+      const replier = !this.toutesRepliees;
+      this.form.lignes.forEach((l) => { l.replie = replier; });
+    },
+    resumeLigne(ligne) {
+      const produit = this.produits.find((p) => p._id === ligne.produit_id);
+      if (!produit) return 'Produit à choisir';
+      const variante = produit.variantes.find((v) => v._id === ligne.variante_id);
+      const noms = ligne.personnalisation.map((p) => p.texte).filter(Boolean).join(', ');
+      return [produit.nom, variante && variante.couleur, ligne.quantite > 1 ? `×${ligne.quantite}` : '', noms && `« ${noms} »`]
+        .filter(Boolean)
+        .join(' · ');
+    },
     ajouterLigne() {
       this.form.lignes.push(ligneVide());
     },
@@ -266,6 +314,7 @@ export default {
         return;
       }
       if (this.form.avance.montant > 0 && !this.form.avance.moyen_paiement) {
+        this.blocPaiementOuvert = true;
         this.erreurMoyen = "Choisissez le moyen de paiement de l'avance.";
         this.$store.dispatch('notifications/erreur', 'Une avance est saisie : choisissez son moyen de paiement (Wave, Orange Money, Espèces…).');
         return;
@@ -298,6 +347,7 @@ export default {
         // commande suivante — c'est l'action la plus répétitive de l'app.
         const paysId = this.form.pays_id;
         this.form = commandeVide(paysId);
+        this.blocPaiementOuvert = false;
         this.ajouterLigne();
         this.$nextTick(() => this.$refs.telephone && this.$refs.telephone.focus());
       } catch (err) {
@@ -338,6 +388,55 @@ export default {
   padding: 14px;
   margin-bottom: 14px;
   background: var(--sanaa-bg-alt);
+}
+.ligne-commande__entete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ligne-commande__bascule {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--sanaa-text);
+  font: inherit;
+}
+.ligne-commande__titre { font-weight: 600; white-space: nowrap; }
+.ligne-commande__resume {
+  color: var(--sanaa-text-muted);
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ligne-commande__total { font-weight: 600; white-space: nowrap; }
+.ligne-commande__corps { padding-top: 12px; }
+.ligne-commande.is-replie { padding-bottom: 8px; }
+.bloc-optionnel__bascule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--sanaa-text);
+  font: inherit;
+  h3 { margin: 0; }
+}
+.bloc-optionnel__resume {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--sanaa-success);
 }
 .ligne-commande__pied {
   display: flex;
