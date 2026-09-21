@@ -41,7 +41,7 @@
           <el-select
             :value="paysContexte.paysActifId"
             size="small"
-            :disabled="!estPorteeGlobale"
+            :disabled="!estPorteeGlobale && paysContexte.liste.length <= 1"
             @input="selectionnerPays"
           >
             <el-option v-if="estPorteeGlobale" :value="null" label="Tous les pays" />
