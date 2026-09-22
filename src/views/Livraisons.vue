@@ -112,6 +112,9 @@
       append-to-body
       @closed="reinitialiserAjout"
     >
+      <p class="sanaa-text-muted aide-recherche">
+        Seules les commandes fabriquées (Terminée) et reçues en pays s'affichent : ce sont celles prêtes à livrer.
+      </p>
       <el-input
         ref="rechercheCommande"
         v-model="recherche"
@@ -122,7 +125,9 @@
         @clear="rechercherCommandes"
       />
       <div v-loading="rechercheEnCours" class="resultats">
-        <p v-if="!rechercheEnCours && resultats.length === 0" class="sanaa-empty">Aucune commande trouvée.</p>
+        <p v-if="!rechercheEnCours && resultats.length === 0" class="sanaa-empty">
+          Aucune commande prête à livrer ne correspond{{ recherche ? ' à cette recherche' : '' }}.
+        </p>
         <div v-for="c in resultats" :key="c._id" class="resultat">
           <div class="resultat__infos">
             <div>
@@ -329,6 +334,9 @@ export default {
         const { data } = await commandesApi.lister({
           q: this.recherche ? this.recherche.trim() : undefined,
           pays_id: this.paysActifId || undefined,
+          // Seules les commandes fabriquées et reçues en pays sont prêtes à livrer.
+          statut_fabrication: 'Terminee',
+          statut_livraison: 'Recue_en_pays',
           limite: 20,
         });
         if (numeroRequete === this.requeteRecherche) {
@@ -482,6 +490,7 @@ export default {
 .reste { font-size: 0.85rem; font-weight: 600; color: var(--sanaa-danger, #c0392b); }
 .reste--solde { color: var(--sanaa-success); }
 
+.aide-recherche { margin: -4px 0 12px; }
 .resultats { min-height: 120px; max-height: 55vh; overflow-y: auto; margin-top: 12px; }
 .resultat {
   display: flex;
