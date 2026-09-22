@@ -24,6 +24,12 @@ const routes = [
         meta: { permission: 'commandes:voir' },
       },
       {
+        path: 'livraisons',
+        name: 'livraisons',
+        component: () => import('@/views/Livraisons.vue'),
+        meta: { permission: 'livraisons:voir' },
+      },
+      {
         path: 'commandes/nouvelle',
         name: 'commande-nouvelle',
         component: () => import('@/views/CommandeForm.vue'),

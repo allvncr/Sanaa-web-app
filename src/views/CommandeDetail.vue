@@ -6,7 +6,7 @@
         <div class="entete-actions">
           <el-button v-can="'commandes:modifier'" type="primary" icon="el-icon-edit" @click="dialogueEdition = true">Modifier</el-button>
           <el-button v-can="'commandes:supprimer'" type="danger" plain icon="el-icon-delete" :loading="suppression" @click="supprimerCommande">Supprimer</el-button>
-          <el-button icon="el-icon-back" @click="$router.push({ name: 'commandes' })">Retour</el-button>
+          <el-button icon="el-icon-back" @click="retour">{{ $route.query.retour === 'livraisons' ? 'Retour aux livraisons' : 'Retour' }}</el-button>
         </div>
       </div>
 
@@ -71,6 +71,9 @@
           <p>{{ commande.client_id ? commande.client_id.adresse : '' }}</p>
           <p class="sanaa-text-muted">Canal : {{ commande.canal_vente }} — Pays : {{ commande.pays_id ? commande.pays_id.nom : '' }}</p>
           <p v-if="commande.commentaires" class="sanaa-text-muted">« {{ commande.commentaires }} »</p>
+          <p v-if="joursLivraison.length" class="livraison-prevue">
+            <i class="el-icon-truck" /> Livraison prévue le {{ joursLivraison.map(formaterJour).join(', ') }}
+          </p>
 
           <div v-if="jalons.length" class="jalons">
             <h4>Historique des dates</h4>
@@ -160,6 +163,7 @@
 
 <script>
 import commandesApi from '@/services/commandes.api';
+import livraisonsApi from '@/services/livraisons.api';
 import StatutBadge from '@/components/common/StatutBadge.vue';
 import CommandeEditDialog from '@/components/commandes/CommandeEditDialog.vue';
 import CommandeHistorique from '@/components/commandes/CommandeHistorique.vue';
@@ -184,6 +188,7 @@ export default {
       nouveauStatutLivraison: '',
       dialoguePaiement: false,
       dialogueEdition: false,
+      joursLivraison: [],
       suppression: false,
       versionHistorique: 0,
       nouveauPaiement: { type: 'solde', moyen_paiement: '', montant: 0, reference: '' },
@@ -222,8 +227,29 @@ export default {
         const { data } = await commandesApi.obtenir(this.id);
         this.commande = data.data;
         this.versionHistorique += 1;
+        this.chargerJoursLivraison();
       } finally {
         this.chargement = false;
+      }
+    },
+    retour() {
+      if (this.$route.query.retour === 'livraisons') {
+        this.$router.push({ name: 'livraisons', query: { jour: this.$route.query.jour } });
+      } else {
+        this.$router.push({ name: 'commandes' });
+      }
+    },
+    formaterJour(jour) {
+      return jour.split('-').reverse().join('/');
+    },
+    // Jours du calendrier des livraisons où cette commande est prévue (info secondaire).
+    async chargerJoursLivraison() {
+      if (!this.$can('livraisons:voir')) return;
+      try {
+        const { data } = await livraisonsApi.lister({ commande_id: this.id });
+        this.joursLivraison = data.data.map((l) => l.jour);
+      } catch (e) {
+        this.joursLivraison = [];
       }
     },
     async supprimerCommande() {
@@ -303,6 +329,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.livraison-prevue { color: var(--sanaa-accent-2-dark); font-weight: 600; font-size: 0.9rem; }
 .entete-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sanaa-grid--statuts { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 16px; }
 .sanaa-grid--2col { grid-template-columns: 1fr 2fr; @media (max-width: 900px) { grid-template-columns: 1fr; } }

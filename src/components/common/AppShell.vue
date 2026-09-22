@@ -88,6 +88,7 @@ export default {
       itemsMenu: [
         { name: 'dashboard', label: 'Dashboard', icone: 'el-icon-data-line', permission: 'dashboard:voir_pays' },
         { name: 'commandes', label: 'Commandes', icone: 'el-icon-shopping-bag-1', permission: 'commandes:voir' },
+        { name: 'livraisons', label: 'Livraisons', icone: 'el-icon-truck', permission: 'livraisons:voir' },
         { name: 'encaissements', label: 'Encaissements du jour', icone: 'el-icon-wallet', permission: 'paiements:voir' },
         { name: 'clients', label: 'Clients', icone: 'el-icon-user', permission: 'clients:voir' },
         { name: 'catalogue', label: 'Catalogue global', icone: 'el-icon-goods', permission: 'catalogue:voir' },
