@@ -29,6 +29,7 @@
           </template>
         </el-table-column>
       </el-table>
+      <PaginationBarre :page="pagination.page" :limite="pagination.limite" :total="pagination.total" @update:page="changerPage" @update:limite="changerLimite" />
     </div>
 
     <el-dialog :title="utilisateurActuel ? 'Modifier' : 'Nouvel utilisateur'" :visible.sync="dialogueOuvert" width="480px">
@@ -64,13 +65,16 @@
 import { mapState } from 'vuex';
 import utilisateursApi from '@/services/utilisateurs.api';
 import referentielsApi from '@/services/referentiels.api';
+import PaginationBarre from '@/components/common/PaginationBarre.vue';
 
 export default {
   name: 'Utilisateurs',
+  components: { PaginationBarre },
   data() {
     return {
       chargement: false,
       utilisateurs: [],
+      pagination: { page: 1, limite: 20, total: 0 },
       roles: [],
       dialogueOuvert: false,
       utilisateurActuel: null,
@@ -90,11 +94,21 @@ export default {
     this.charger();
   },
   methods: {
+    changerPage(page) {
+      this.pagination.page = page;
+      this.charger();
+    },
+    changerLimite(limite) {
+      this.pagination.limite = limite;
+      this.pagination.page = 1;
+      this.charger();
+    },
     async charger() {
       this.chargement = true;
       try {
-        const { data } = await utilisateursApi.lister();
+        const { data } = await utilisateursApi.lister({ page: this.pagination.page, limite: this.pagination.limite });
         this.utilisateurs = data.data;
+        this.pagination.total = data.meta.total;
       } finally {
         this.chargement = false;
       }

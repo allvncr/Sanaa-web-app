@@ -6,7 +6,7 @@
     </div>
 
     <div class="sanaa-toolbar">
-      <el-input v-model="recherche" placeholder="Rechercher (nom, téléphone)" prefix-icon="el-icon-search" style="max-width:280px" @input="charger" />
+      <el-input v-model="recherche" placeholder="Rechercher (nom, téléphone)" prefix-icon="el-icon-search" style="max-width:280px" @input="chargerDepuisFiltre" />
     </div>
 
     <div class="sanaa-card sanaa-table-scroll" v-loading="chargement">
@@ -19,6 +19,7 @@
         </el-table-column>
       </el-table>
       <p v-if="!chargement && clients.length === 0" class="sanaa-empty">Aucun client.</p>
+      <PaginationBarre :page="pagination.page" :limite="pagination.limite" :total="pagination.total" @update:page="changerPage" @update:limite="changerLimite" />
     </div>
 
     <el-dialog :title="clientActuel ? 'Fiche client' : 'Nouveau client'" :visible.sync="dialogueOuvert" width="480px">
@@ -52,14 +53,17 @@
 <script>
 import { mapState } from 'vuex';
 import clientsApi from '@/services/clients.api';
+import PaginationBarre from '@/components/common/PaginationBarre.vue';
 
 export default {
   name: 'Clients',
+  components: { PaginationBarre },
   data() {
     return {
       chargement: false,
       clients: [],
       recherche: '',
+      pagination: { page: 1, limite: 20, total: 0 },
       dialogueOuvert: false,
       clientActuel: null,
       indicateurs: {},
@@ -67,14 +71,33 @@ export default {
     };
   },
   computed: { ...mapState('paysContexte', { paysActifId: 'paysActifId' }) },
-  watch: { paysActifId() { this.charger(); } },
+  watch: { paysActifId() { this.chargerDepuisFiltre(); } },
   mounted() { this.charger(); },
   methods: {
+    chargerDepuisFiltre() {
+      this.pagination.page = 1;
+      this.charger();
+    },
+    changerPage(page) {
+      this.pagination.page = page;
+      this.charger();
+    },
+    changerLimite(limite) {
+      this.pagination.limite = limite;
+      this.pagination.page = 1;
+      this.charger();
+    },
     async charger() {
       this.chargement = true;
       try {
-        const { data } = await clientsApi.lister({ pays_id: this.paysActifId || undefined, q: this.recherche || undefined });
+        const { data } = await clientsApi.lister({
+          pays_id: this.paysActifId || undefined,
+          q: this.recherche || undefined,
+          page: this.pagination.page,
+          limite: this.pagination.limite,
+        });
         this.clients = data.data;
+        this.pagination.total = data.meta.total;
       } finally {
         this.chargement = false;
       }

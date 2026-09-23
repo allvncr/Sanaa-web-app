@@ -1,8 +1,8 @@
 import api from './api';
 
 export default {
-  lister() {
-    return api.get('/utilisateurs');
+  lister(params) {
+    return api.get('/utilisateurs', { params });
   },
   creer(data) {
     return api.post('/utilisateurs', data);

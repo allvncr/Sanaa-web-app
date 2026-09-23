@@ -16,12 +16,12 @@
         prefix-icon="el-icon-search"
         placeholder="Rechercher : n° de commande, client, téléphone, prénom gravé…"
         @input="chargerDiffere"
-        @clear="charger"
+        @clear="chargerDepuisFiltre"
       />
-      <el-select v-model="filtres.creePar" placeholder="Saisi par" clearable filterable size="small" style="width: 190px" @change="charger">
+      <el-select v-model="filtres.creePar" placeholder="Saisi par" clearable filterable size="small" style="width: 190px" @change="chargerDepuisFiltre">
         <el-option v-for="u in createurs" :key="u._id" :value="u._id" :label="`${u.nom} (${u.total})`" />
       </el-select>
-      <el-select v-model="filtres.statut" placeholder="Statut" clearable size="small" style="width: 160px" @change="charger">
+      <el-select v-model="filtres.statut" placeholder="Statut" clearable size="small" style="width: 160px" @change="chargerDepuisFiltre">
         <el-option v-for="(libelle, val) in statutsCommande" :key="val" :value="val" :label="libelle" />
       </el-select>
       <el-date-picker
@@ -32,7 +32,7 @@
         start-placeholder="Début"
         end-placeholder="Fin"
         value-format="yyyy-MM-dd"
-        @change="charger"
+        @change="chargerDepuisFiltre"
       />
       <el-button size="small" icon="el-icon-refresh" @click="charger">Actualiser</el-button>
     </div>
@@ -93,7 +93,7 @@
         </el-table-column>
       </el-table>
       <p v-if="!chargement && commandes.length === 0" class="sanaa-empty">Aucune commande trouvée.</p>
-      <p v-else-if="!chargement" class="sanaa-text-muted resultat">{{ commandes.length }} commande{{ commandes.length > 1 ? 's' : '' }}</p>
+      <PaginationBarre :page="pagination.page" :limite="pagination.limite" :total="pagination.total" @update:page="changerPage" @update:limite="changerLimite" />
     </div>
   </div>
 </template>
@@ -102,15 +102,17 @@
 import { mapState } from 'vuex';
 import commandesApi from '@/services/commandes.api';
 import StatutBadge from '@/components/common/StatutBadge.vue';
+import PaginationBarre from '@/components/common/PaginationBarre.vue';
 
 export default {
   name: 'CommandesListe',
-  components: { StatutBadge },
+  components: { StatutBadge, PaginationBarre },
   data() {
     return {
       chargement: false,
       commandes: [],
       filtres: { q: '', creePar: '', statut: '', plage: [] },
+      pagination: { page: 1, limite: 20, total: 0 },
       createurs: [],
       minuterie: null,
       requete: 0,
@@ -129,7 +131,7 @@ export default {
     paysActifId() {
       this.filtres.creePar = '';
       this.chargerCreateurs();
-      this.charger();
+      this.chargerDepuisFiltre();
     },
   },
   mounted() {
@@ -151,7 +153,23 @@ export default {
     // Recherche à la frappe : on attend une courte pause avant d'interroger le serveur.
     chargerDiffere() {
       clearTimeout(this.minuterie);
-      this.minuterie = setTimeout(this.charger, 350);
+      this.minuterie = setTimeout(this.chargerDepuisFiltre, 350);
+    },
+    // Un filtre qui change invalide la page courante (ex. page 3 peut ne plus exister).
+    chargerDepuisFiltre() {
+      this.pagination.page = 1;
+      this.charger();
+    },
+    changerPage(page) {
+      this.pagination.page = page;
+      this.viderSelection();
+      this.charger();
+    },
+    changerLimite(limite) {
+      this.pagination.limite = limite;
+      this.pagination.page = 1;
+      this.viderSelection();
+      this.charger();
     },
     async charger() {
       clearTimeout(this.minuterie);
@@ -166,9 +184,14 @@ export default {
           statut: this.filtres.statut || undefined,
           date_de,
           date_a,
+          page: this.pagination.page,
+          limite: this.pagination.limite,
         });
         // Réponse périmée (une frappe plus récente a relancé la recherche) : ignorée.
-        if (numeroRequete === this.requete) this.commandes = data.data;
+        if (numeroRequete === this.requete) {
+          this.commandes = data.data;
+          this.pagination.total = data.meta.total;
+        }
       } finally {
         if (numeroRequete === this.requete) this.chargement = false;
       }
@@ -228,7 +251,6 @@ export default {
 <style scoped>
 .el-table >>> .el-table__row { cursor: pointer; }
 .recherche { width: 340px; max-width: 100%; }
-.resultat { margin: 10px 0 0; font-size: 0.85rem; color: var(--sanaa-text-muted); }
 .barre-lot {
   display: flex;
   flex-wrap: wrap;
