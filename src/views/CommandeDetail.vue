@@ -115,7 +115,7 @@
           </el-button>
         </div>
         <div class="sanaa-table-scroll">
-          <el-table :data="commande.paiements" size="small">
+          <el-table :data="commande.paiements" size="small" :row-class-name="({ row }) => (row.annule ? 'paiement-annule' : '')">
             <el-table-column label="Date" min-width="110">
               <template slot-scope="{ row }">{{ row.date_paiement | dateFr }}</template>
             </el-table-column>
@@ -125,6 +125,30 @@
               <template slot-scope="{ row }">{{ row.montant | montant }}</template>
             </el-table-column>
             <el-table-column label="Référence" prop="reference" min-width="120" />
+            <el-table-column label="Statut" min-width="100">
+              <template slot-scope="{ row }">
+                <el-tag v-if="row.annule" type="info" size="mini">Annulé</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="" min-width="110" align="right">
+              <template slot-scope="{ row }">
+                <el-button
+                  v-can="'paiements:enregistrer'"
+                  type="text"
+                  icon="el-icon-edit"
+                  title="Corriger le moyen, le type ou la référence"
+                  @click="ouvrirEditionPaiement(row)"
+                />
+                <el-button
+                  v-if="!row.annule"
+                  v-can="'paiements:annuler'"
+                  type="text"
+                  icon="el-icon-close"
+                  title="Annuler ce paiement"
+                  @click="annulerPaiement(row)"
+                />
+              </template>
+            </el-table-column>
           </el-table>
           <p v-if="commande.paiements.length === 0" class="sanaa-empty">Aucun paiement enregistré.</p>
         </div>
@@ -157,6 +181,33 @@
           <el-button type="primary" :loading="enregistrementPaiement" @click="enregistrerPaiement">Enregistrer</el-button>
         </span>
       </el-dialog>
+
+      <el-dialog title="Corriger le paiement" :visible.sync="dialogueEditionPaiement" width="420px">
+        <template v-if="paiementEnEdition">
+          <el-alert type="info" :closable="false" show-icon style="margin-bottom:16px">
+            Le montant et la date d'un paiement ne se corrigent pas : {{ montantFormate(paiementEnEdition.montant) }} du
+            {{ paiementEnEdition.date_paiement | dateFr }} restent inchangés. Annulez le paiement puis ressaisissez-le si l'un des deux est faux.
+          </el-alert>
+          <el-form :model="paiementEdite" label-position="top">
+            <el-form-item label="Type">
+              <el-select v-model="paiementEdite.type" style="width:100%">
+                <el-option label="Avance" value="avance" />
+                <el-option label="Solde" value="solde" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Moyen de paiement">
+              <el-input v-model="paiementEdite.moyen_paiement" />
+            </el-form-item>
+            <el-form-item label="Référence (optionnel)">
+              <el-input v-model="paiementEdite.reference" />
+            </el-form-item>
+          </el-form>
+        </template>
+        <span slot="footer">
+          <el-button @click="dialogueEditionPaiement = false">Annuler</el-button>
+          <el-button type="primary" :loading="enregistrementEditionPaiement" @click="enregistrerEditionPaiement">Enregistrer</el-button>
+        </span>
+      </el-dialog>
     </template>
   </div>
 </template>
@@ -167,6 +218,7 @@ import livraisonsApi from '@/services/livraisons.api';
 import StatutBadge from '@/components/common/StatutBadge.vue';
 import CommandeEditDialog from '@/components/commandes/CommandeEditDialog.vue';
 import CommandeHistorique from '@/components/commandes/CommandeHistorique.vue';
+import { formaterMontant as montantFormate } from '@/utils/format';
 
 const TRANSITIONS = {
   Nouvelle: ['Confirmee', 'Annulee', 'Refusee'],
@@ -193,6 +245,10 @@ export default {
       versionHistorique: 0,
       nouveauPaiement: { type: 'solde', moyen_paiement: '', montant: 0, reference: '' },
       enregistrementPaiement: false,
+      dialogueEditionPaiement: false,
+      paiementEnEdition: null,
+      paiementEdite: { type: '', moyen_paiement: '', reference: '' },
+      enregistrementEditionPaiement: false,
       statutsCommande: this.$i18n.messages.fr.statuts.commande,
       statutsFabrication: this.$i18n.messages.fr.statuts.fabrication,
       statutsLivraison: this.$i18n.messages.fr.statuts.livraison,
@@ -324,12 +380,51 @@ export default {
         this.enregistrementPaiement = false;
       }
     },
+    montantFormate,
+    ouvrirEditionPaiement(row) {
+      this.paiementEnEdition = row;
+      this.paiementEdite = { type: row.type, moyen_paiement: row.moyen_paiement, reference: row.reference || '' };
+      this.dialogueEditionPaiement = true;
+    },
+    async enregistrerEditionPaiement() {
+      this.enregistrementEditionPaiement = true;
+      try {
+        await commandesApi.modifierPaiement(this.id, this.paiementEnEdition._id, this.paiementEdite);
+        this.$store.dispatch('notifications/succes', 'Paiement corrigé.');
+        this.dialogueEditionPaiement = false;
+        await this.charger();
+      } catch (err) {
+        this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Échec de la correction');
+      } finally {
+        this.enregistrementEditionPaiement = false;
+      }
+    },
+    async annulerPaiement(row) {
+      try {
+        await this.$confirm(
+          `Annuler ce paiement de ${montantFormate(row.montant)} (${row.moyen_paiement}) ? Il restera visible mais ne comptera plus dans le reste à payer. Vous pourrez ensuite en ressaisir un correct.`,
+          'Annuler le paiement',
+          { type: 'warning', confirmButtonText: 'Annuler le paiement', cancelButtonText: 'Retour' }
+        );
+      } catch (e) {
+        return;
+      }
+      try {
+        await commandesApi.annulerPaiement(this.id, row._id);
+        this.$store.dispatch('notifications/succes', 'Paiement annulé.');
+        await this.charger();
+      } catch (err) {
+        this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Échec de l’annulation');
+      }
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .livraison-prevue { color: var(--sanaa-accent-2-dark); font-weight: 600; font-size: 0.9rem; }
+.el-table >>> .paiement-annule td { color: var(--sanaa-text-muted); text-decoration: line-through; }
+.el-table >>> .paiement-annule .el-tag { text-decoration: none; }
 .entete-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sanaa-grid--statuts { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 16px; }
 .sanaa-grid--2col { grid-template-columns: 1fr 2fr; @media (max-width: 900px) { grid-template-columns: 1fr; } }

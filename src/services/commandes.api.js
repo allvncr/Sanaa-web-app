@@ -40,6 +40,12 @@ export default {
   enregistrerPaiement(id, data) {
     return api.post(`/commandes/${id}/paiements`, data);
   },
+  modifierPaiement(id, paiementId, data) {
+    return api.put(`/commandes/${id}/paiements/${paiementId}`, data);
+  },
+  annulerPaiement(id, paiementId) {
+    return api.patch(`/commandes/${id}/paiements/${paiementId}/annuler`);
+  },
   encaissementsJour(paysId, date) {
     return api.get('/paiements/encaissements-jour', { params: { pays_id: paysId, date } });
   },
