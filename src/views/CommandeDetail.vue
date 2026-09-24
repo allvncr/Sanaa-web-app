@@ -167,7 +167,9 @@
             </el-select>
           </el-form-item>
           <el-form-item label="Moyen de paiement">
-            <el-input v-model="nouveauPaiement.moyen_paiement" />
+            <el-select v-model="nouveauPaiement.moyen_paiement" placeholder="Choisir un moyen de paiement" style="width:100%">
+              <el-option v-for="m in moyensPaiement" :key="m.nom" :value="m.nom" :label="m.nom" />
+            </el-select>
           </el-form-item>
           <el-form-item label="Montant">
             <el-input-number v-model="nouveauPaiement.montant" :min="0" style="width:100%" />
@@ -196,7 +198,15 @@
               </el-select>
             </el-form-item>
             <el-form-item label="Moyen de paiement">
-              <el-input v-model="paiementEdite.moyen_paiement" />
+              <el-select v-model="paiementEdite.moyen_paiement" placeholder="Choisir un moyen de paiement" style="width:100%">
+                <el-option v-for="m in moyensPaiement" :key="m.nom" :value="m.nom" :label="m.nom" />
+                <el-option
+                  v-if="paiementEnEdition && !moyensPaiement.some((m) => m.nom === paiementEnEdition.moyen_paiement)"
+                  :key="paiementEnEdition.moyen_paiement"
+                  :value="paiementEnEdition.moyen_paiement"
+                  :label="`${paiementEnEdition.moyen_paiement} (valeur d'origine)`"
+                />
+              </el-select>
             </el-form-item>
             <el-form-item label="Référence (optionnel)">
               <el-input v-model="paiementEdite.reference" />
@@ -255,6 +265,13 @@ export default {
     };
   },
   computed: {
+    // Mêmes moyens de paiement que la saisie de commande (Pays.moyens_paiement,
+    // standardisés par pays — retour V0.1) : plus de champ libre, pour éviter
+    // les fautes de frappe (Espece/Espèces, Orange money/Orange Money...).
+    moyensPaiement() {
+      const moyens = this.commande && this.commande.pays_id ? this.commande.pays_id.moyens_paiement : [];
+      return (moyens || []).filter((m) => m.actif);
+    },
     transitionsCommande() {
       return this.commande ? TRANSITIONS[this.commande.statut_commande] || [] : [];
     },
