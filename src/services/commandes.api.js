@@ -46,7 +46,7 @@ export default {
   annulerPaiement(id, paiementId) {
     return api.patch(`/commandes/${id}/paiements/${paiementId}/annuler`);
   },
-  encaissementsJour(paysId, date) {
-    return api.get('/paiements/encaissements-jour', { params: { pays_id: paysId, date } });
+  encaissementsJour(paysId, date, periode) {
+    return api.get('/paiements/encaissements-jour', { params: { pays_id: paysId, date, periode } });
   },
 };
