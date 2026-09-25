@@ -7,11 +7,12 @@ import router from '@/router';
 // ainsi que les erreurs 401/403 de façon centralisée.
 //
 // En développement, l'URL relative "/api/v1" passe par le proxy Vite vers le
-// backend local (voir vite.config.js). En production, frontend et backend sont
-// déployés sur des domaines différents (ex. Vercel + Render) : VITE_API_BASE_URL
-// doit alors pointer vers l'URL complète du backend (ex.
-// https://sanaa-backend.onrender.com/api/v1), définie au moment du build.
-const api = axios.create({ baseURL: 'https://sanaa-api.onrender.com/api/v1' });
+// backend local (voir vite.config.js). VITE_API_BASE_URL (définie au moment du
+// build, ex. dans un .env.production.local non commité) permet de pointer
+// ailleurs — utilisé sur le VPS (deploy/) où frontend et backend sont sur le
+// même domaine : VITE_API_BASE_URL=/api/v1 (Nginx fait le proxy). Sans cette
+// variable, on retombe sur l'URL Render actuelle (Netlify) pour ne rien casser.
+const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || 'https://sanaa-api.onrender.com/api/v1' });
 
 api.interceptors.request.use((config) => {
   const token = store.state.auth.accessToken;
