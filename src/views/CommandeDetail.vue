@@ -440,8 +440,11 @@ export default {
 
 <style lang="scss" scoped>
 .livraison-prevue { color: var(--sanaa-accent-2-dark); font-weight: 600; font-size: 0.9rem; }
-.el-table >>> .paiement-annule td { color: var(--sanaa-text-muted); text-decoration: line-through; }
-.el-table >>> .paiement-annule .el-tag { text-decoration: none; }
+// `>>>` n'est pas un sélecteur CSS valide pour Sass (ce fichier est en
+// lang="scss", contrairement aux autres vues) : ::v-deep est équivalent et
+// reconnu par le compilateur SFC de Vue sans déclencher cet avertissement.
+.el-table ::v-deep .paiement-annule td { color: var(--sanaa-text-muted); text-decoration: line-through; }
+.el-table ::v-deep .paiement-annule .el-tag { text-decoration: none; }
 .entete-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sanaa-grid--statuts { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 16px; }
 .sanaa-grid--2col { grid-template-columns: 1fr 2fr; @media (max-width: 900px) { grid-template-columns: 1fr; } }
