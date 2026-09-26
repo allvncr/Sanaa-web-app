@@ -4,6 +4,7 @@
       <div class="sanaa-page-header">
         <h1>Commande {{ commande.numero }}</h1>
         <div class="entete-actions">
+          <el-button icon="el-icon-link" @click="copierLienSuivi">Lien de suivi client</el-button>
           <el-button v-can="'commandes:modifier'" type="primary" icon="el-icon-edit" @click="dialogueEdition = true">Modifier</el-button>
           <el-button v-can="'commandes:supprimer'" type="danger" plain icon="el-icon-delete" :loading="suppression" @click="supprimerCommande">Supprimer</el-button>
           <el-button icon="el-icon-back" @click="retour">{{ $route.query.retour === 'livraisons' ? 'Retour aux livraisons' : 'Retour' }}</el-button>
@@ -303,6 +304,15 @@ export default {
         this.chargerJoursLivraison();
       } finally {
         this.chargement = false;
+      }
+    },
+    async copierLienSuivi() {
+      const lien = `${window.location.origin}/suivi?numero=${encodeURIComponent(this.commande.numero)}`;
+      try {
+        await navigator.clipboard.writeText(lien);
+        this.$store.dispatch('notifications/succes', "Lien copié — pensez à rappeler au client d'avoir son téléphone en main.");
+      } catch (e) {
+        this.$alert(lien, 'Lien de suivi (copie manuelle)', { confirmButtonText: 'Fermer' });
       }
     },
     retour() {

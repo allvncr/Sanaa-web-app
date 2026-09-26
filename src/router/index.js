@@ -6,6 +6,7 @@ Vue.use(Router);
 
 const routes = [
   { path: '/connexion', name: 'connexion', component: () => import('@/views/Connexion.vue'), meta: { public: true } },
+  { path: '/suivi', name: 'suivi-commande', component: () => import('@/views/SuiviCommande.vue'), meta: { public: true } },
   {
     path: '/',
     component: () => import('@/components/common/AppShell.vue'),
