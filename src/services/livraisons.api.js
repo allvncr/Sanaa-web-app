@@ -10,4 +10,10 @@ export default {
   retirer(id) {
     return api.delete(`/livraisons/${id}`);
   },
+  marquerLivree(id, { montant_recu, moyen_paiement, frais_livraison }) {
+    return api.patch(`/livraisons/${id}/livrer`, { montant_recu, moyen_paiement, frais_livraison });
+  },
+  signalerProbleme(id) {
+    return api.patch(`/livraisons/${id}/probleme`);
+  },
 };

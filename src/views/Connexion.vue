@@ -52,7 +52,9 @@ export default {
       this.chargement = true;
       try {
         await this.$store.dispatch('auth/connexion', this.form);
-        const redirect = this.$route.query.redirect || { name: 'dashboard' };
+        // "/" plutôt que directement { name: 'dashboard' } : le redirect de la
+        // route racine envoie un Livreur vers son écran dédié (voir router/index.js).
+        const redirect = this.$route.query.redirect || { path: '/' };
         this.$router.push(redirect);
       } catch (err) {
         if (err.response) {

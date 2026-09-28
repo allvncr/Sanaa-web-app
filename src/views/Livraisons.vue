@@ -54,13 +54,26 @@
           </el-button>
         </div>
 
+        <div v-if="resumeJour" class="resume-jour">
+          <span><strong>{{ resumeJour.livrees }}</strong>/{{ livraisonsDuJour.length }} livrée{{ resumeJour.livrees > 1 ? 's' : '' }}</span>
+          <span>Encaissé : <strong>{{ resumeJour.montant | montant }}</strong></span>
+          <span v-if="resumeJour.frais > 0">Frais de livraison : <strong>{{ resumeJour.frais | montant }}</strong></span>
+        </div>
+
         <p v-if="livraisonsDuJour.length === 0" class="sanaa-empty">Aucune livraison prévue ce jour-là.</p>
 
-        <div v-for="l in livraisonsDuJour" :key="l._id" class="livraison" :class="{ 'is-orpheline': !l.commande }" @click="ouvrirCommande(l)">
+        <div
+          v-for="l in livraisonsDuJour"
+          :key="l._id"
+          class="livraison"
+          :class="{ 'is-orpheline': !l.commande, 'is-livree': l.livree }"
+          @click="ouvrirCommande(l)"
+        >
           <template v-if="l.commande">
             <div class="livraison__haut">
               <strong class="livraison__numero">{{ l.commande.numero }}</strong>
-              <StatutBadge :statut="l.commande.statut_livraison" :libelles="statutsLivraison" />
+              <el-tag v-if="l.livree" type="success" size="mini"><i class="el-icon-check" /> Livrée</el-tag>
+              <StatutBadge v-else :statut="l.commande.statut_livraison" :libelles="statutsLivraison" />
             </div>
             <div class="livraison__client">
               {{ l.commande.client && l.commande.client.nom ? l.commande.client.nom : 'Client sans nom' }}
@@ -76,11 +89,17 @@
                 <span v-if="p.personnalisation" class="sanaa-text-muted"> — « {{ p.personnalisation }} »</span>
               </li>
             </ul>
+            <p v-if="l.livree" class="sanaa-text-muted livraison__recap">
+              {{ Number(l.montant_recu) | montant }} encaissé{{ Number(l.frais_livraison) > 0 ? ` + ${formaterMontant(l.frais_livraison)} de frais` : '' }}
+              <template v-if="l.livree_par"> — par {{ l.livree_par }}</template>
+              <template v-if="l.livree_le"> le {{ l.livree_le | dateHeureFr }}</template>
+            </p>
             <div class="livraison__bas">
               <span :class="Number(l.commande.reste_a_payer) > 0 ? 'reste' : 'reste reste--solde'">
                 {{ Number(l.commande.reste_a_payer) > 0 ? `Reste à encaisser : ${formaterMontant(l.commande.reste_a_payer)}` : 'Soldée' }}
               </span>
               <el-button
+                v-if="!l.livree"
                 v-can="'livraisons:planifier'"
                 type="text"
                 size="small"
@@ -96,7 +115,7 @@
             <div class="livraison__haut"><strong>Commande supprimée</strong></div>
             <div class="livraison__bas">
               <span />
-              <el-button v-can="'livraisons:planifier'" type="text" size="small" icon="el-icon-close" @click.stop="retirer(l)">Retirer</el-button>
+              <el-button v-if="!l.livree" v-can="'livraisons:planifier'" type="text" size="small" icon="el-icon-close" @click.stop="retirer(l)">Retirer</el-button>
             </div>
           </template>
         </div>
@@ -113,7 +132,7 @@
       @closed="reinitialiserAjout"
     >
       <p class="sanaa-text-muted aide-recherche">
-        Seules les commandes fabriquées (Terminée) et reçues en pays s'affichent : ce sont celles prêtes à livrer.
+        Seules les commandes fabriquées (Terminée) et reçues en pays — ou déjà tentées sans succès — s'affichent : ce sont celles prêtes à livrer.
       </p>
       <el-input
         ref="rechercheCommande"
@@ -234,6 +253,17 @@ export default {
     livraisonsDuJour() {
       return this.parJour[this.jourSelectionne] || [];
     },
+    // Rapprochement quotidien (qui a vraiment remis combien) — masqué s'il n'y a
+    // encore aucune livraison marquée pour ce jour.
+    resumeJour() {
+      const livrees = this.livraisonsDuJour.filter((l) => l.livree);
+      if (livrees.length === 0) return null;
+      return {
+        livrees: livrees.length,
+        montant: livrees.reduce((s, l) => s + Number(l.montant_recu || 0), 0),
+        frais: livrees.reduce((s, l) => s + Number(l.frais_livraison || 0), 0),
+      };
+    },
   },
   watch: {
     paysActifId() {
@@ -334,9 +364,9 @@ export default {
         const { data } = await commandesApi.lister({
           q: this.recherche ? this.recherche.trim() : undefined,
           pays_id: this.paysActifId || undefined,
-          // Seules les commandes fabriquées et reçues en pays sont prêtes à livrer.
+          // Prêtes à livrer : fabriquées, et reçues en pays OU déjà tentées sans succès.
           statut_fabrication: 'Terminee',
-          statut_livraison: 'Recue_en_pays',
+          statut_livraison: ['Recue_en_pays', 'Retour_echec'],
           limite: 20,
         });
         if (numeroRequete === this.requeteRecherche) {
@@ -467,6 +497,17 @@ export default {
 }
 .jour__titre { margin: 0 0 2px; font-size: 1.05rem; }
 
+.resume-jour {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: var(--sanaa-radius-sm);
+  background: var(--sanaa-accent-1-soft);
+  font-size: 0.85rem;
+}
+
 .livraison {
   padding: 12px;
   margin-bottom: 10px;
@@ -476,7 +517,9 @@ export default {
   cursor: pointer;
   &:hover { border-color: var(--sanaa-accent-2); }
   &.is-orpheline { cursor: default; opacity: 0.8; }
+  &.is-livree { border-left: 3px solid var(--sanaa-success); opacity: 0.85; }
 }
+.livraison__recap { margin: 4px 0 8px; }
 .livraison__haut { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
 .livraison__numero { font-size: 0.95rem; }
 .livraison__client { font-size: 0.9rem; }

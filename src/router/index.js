@@ -4,14 +4,37 @@ import store from '@/store';
 
 Vue.use(Router);
 
+// Accueil selon le rôle : un Livreur n'a pas accès au dashboard, l'y renvoyer
+// (redirect "/" statique, ou "*") le bloquerait silencieusement sur place.
+function accueilSelonRole() {
+  return store.state.auth.utilisateur && store.state.auth.utilisateur.role.nom === 'Livreur'
+    ? { name: 'mes-livraisons' }
+    : { name: 'dashboard' };
+}
+
 const routes = [
   { path: '/connexion', name: 'connexion', component: () => import('@/views/Connexion.vue'), meta: { public: true } },
   { path: '/suivi', name: 'suivi-commande', component: () => import('@/views/SuiviCommande.vue'), meta: { public: true } },
   {
+    // Écran dédié au rôle Livreur : authentifié comme le reste (pas de meta.public),
+    // mais volontairement hors AppShell — pas de menu, pas de sélecteur de pays,
+    // optimisé mobile (retour V0.1, section livreurs, 26/09/2026).
+    path: '/mes-livraisons',
+    name: 'mes-livraisons',
+    component: () => import('@/views/LivraisonMobile.vue'),
+    meta: { permission: 'livraisons:livrer' },
+  },
+  {
     path: '/',
     component: () => import('@/components/common/AppShell.vue'),
     children: [
-      { path: '', redirect: { name: 'dashboard' } },
+      {
+        path: '',
+        // Fonction (pas un objet statique) : un utilisateur Livreur qui atterrit
+        // sur "/" (favori, retour navigateur...) doit filer vers son écran dédié,
+        // pas vers le dashboard auquel il n'a pas accès (blocage silencieux sinon).
+        redirect: accueilSelonRole,
+      },
       {
         path: 'dashboard',
         name: 'dashboard',
@@ -110,7 +133,7 @@ const routes = [
       },
     ],
   },
-  { path: '*', redirect: { name: 'dashboard' } },
+  { path: '*', redirect: accueilSelonRole },
 ];
 
 const router = new Router({ mode: 'history', routes });
@@ -130,6 +153,13 @@ router.beforeEach(async (to, from, next) => {
 
   if (store.state.paysContexte.liste.length === 0) {
     await store.dispatch('paysContexte/initialiser');
+  }
+
+  // Le calendrier admin ("Livraisons") reste accessible en lecture à un Livreur
+  // (même permission livraisons:voir), mais on le renvoie vers son écran mobile
+  // dédié, bien plus simple pour son usage réel — pas une histoire de droits.
+  if (to.name === 'livraisons' && store.state.auth.utilisateur?.role.nom === 'Livreur') {
+    return next({ name: 'mes-livraisons' });
   }
 
   if (to.meta.permission && !store.getters['auth/aPermission'](to.meta.permission)) {
