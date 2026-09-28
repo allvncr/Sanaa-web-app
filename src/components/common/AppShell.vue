@@ -156,9 +156,19 @@ export default {
   &.is-collapsed { width: var(--sanaa-sidebar-width-collapsed); }
 
   @media (max-width: 768px) {
-    height: auto;
+    // Sur mobile (Safari iOS en tête), `position: fixed` + `bottom: 0` s'ancre
+    // sur la hauteur de mise en page du navigateur, plus grande que la zone
+    // réellement visible quand la barre d'adresse est affichée : le bas du
+    // menu se retrouvait rendu hors écran, invisible et non cliquable (bug
+    // rapporté le 28/09/2026). 100dvh (hauteur de viewport dynamique) suit la
+    // zone visible réelle ; on fixe une hauteur explicite plutôt que de la
+    // déduire de top+bottom, et 100vh reste en repli pour les navigateurs qui
+    // ne connaissent pas dvh.
+    height: 100vh;
+    height: 100dvh;
     position: fixed;
-    inset: 0 auto 0 0;
+    top: 0;
+    left: 0;
     z-index: 220;
     transform: translateX(-100%);
     transition: transform 0.25s ease;
@@ -175,7 +185,11 @@ export default {
   @media (max-width: 768px) {
     display: block;
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100vh;
+    height: 100dvh; // même raison que .shell__sidebar ci-dessus
     background: rgba(44, 38, 34, 0.4);
     z-index: 210;
   }
