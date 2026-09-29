@@ -23,9 +23,10 @@
             <el-tag :type="row.actif ? 'success' : 'info'" size="mini">{{ row.actif ? 'Actif' : 'Inactif' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="" min-width="100">
+        <el-table-column label="" min-width="140">
           <template slot-scope="{ row }">
             <el-button size="mini" icon="el-icon-edit" @click="ouvrirEdition(row)" v-can="'utilisateurs:modifier'" />
+            <el-button size="mini" icon="el-icon-delete" type="danger" plain @click="supprimer(row)" v-can="'utilisateurs:supprimer'" />
           </template>
         </el-table-column>
       </el-table>
@@ -147,6 +148,20 @@ export default {
         this.charger();
       } catch (err) {
         this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Échec de l’enregistrement');
+      }
+    },
+    async supprimer(u) {
+      try {
+        await this.$confirm(`Supprimer définitivement le compte « ${u.nom} » (${u.email}) ?`, 'Confirmation', { type: 'warning' });
+      } catch (e) {
+        return;
+      }
+      try {
+        await utilisateursApi.supprimer(u._id);
+        this.$store.dispatch('notifications/succes', 'Utilisateur supprimé.');
+        this.charger();
+      } catch (err) {
+        this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Suppression impossible');
       }
     },
   },

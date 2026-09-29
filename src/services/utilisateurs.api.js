@@ -13,4 +13,7 @@ export default {
   attribuerPays(id, paysIds) {
     return api.post(`/utilisateurs/${id}/pays`, { pays_ids: paysIds });
   },
+  supprimer(id) {
+    return api.delete(`/utilisateurs/${id}`);
+  },
 };
