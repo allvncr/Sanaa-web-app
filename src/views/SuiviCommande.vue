@@ -78,18 +78,24 @@
 
         <div class="suivi__articles">
           <h3>Votre/vos bijou(x)</h3>
-          <ul>
+          <ul class="suivi__liste-articles">
             <li v-for="(a, i) in resultat.articles" :key="i">
-              {{ a.produit }}<template v-if="a.couleur"> — {{ a.couleur }}</template>
-              <template v-if="a.quantite > 1"> ×{{ a.quantite }}</template>
+              <div class="suivi__article-titre">
+                {{ a.produit }}<template v-if="a.couleur"> — {{ a.couleur }}</template>
+                <template v-if="a.quantite > 1"> ×{{ a.quantite }}</template>
+              </div>
+              <div v-if="a.detail" class="suivi__article-detail">{{ a.detail }}</div>
+              <div v-if="a.personnalisation" class="suivi__article-detail">Personnalisation : « {{ a.personnalisation }} »</div>
             </li>
           </ul>
         </div>
 
-        <!-- Réservé pour une prochaine version : mise en avant de produits,
-             réductions... une fois que ce point de suivi devient un véritable
-             espace client (voir échange du 26/09/2026). Volontairement vide
-             pour l'instant. -->
+        <div v-if="resultat.client" class="suivi__livraison">
+          <h3>Livraison</h3>
+          <p v-if="resultat.client.nom">{{ resultat.client.nom }}</p>
+          <p v-if="resultat.client.telephone_whatsapp"><i class="el-icon-phone" /> {{ resultat.client.telephone_whatsapp }}</p>
+          <p v-if="resultat.client.adresse"><i class="el-icon-location-outline" /> {{ resultat.client.adresse }}</p>
+        </div>
       </div>
     </div>
 
@@ -286,8 +292,24 @@ export default {
 .suivi__etape-date { display: block; font-weight: 400; font-size: 0.78rem; color: var(--sanaa-text-muted); }
 .suivi__etape-date--estimee { font-style: italic; }
 
-.suivi__articles h3 { font-size: 0.9rem; margin: 0 0 8px; color: var(--sanaa-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.suivi__articles ul { margin: 0; padding-left: 18px; }
+.suivi__articles h3, .suivi__livraison h3 {
+  font-size: 0.9rem;
+  margin: 0 0 8px;
+  color: var(--sanaa-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.suivi__liste-articles { margin: 0; padding: 0; list-style: none; }
+.suivi__liste-articles li:not(:last-child) { margin-bottom: 10px; }
+.suivi__article-titre { font-weight: 600; }
+.suivi__article-detail { color: var(--sanaa-text-muted); font-size: 0.85rem; margin-top: 2px; }
+
+.suivi__livraison {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--sanaa-border);
+  p { margin: 0 0 4px; display: flex; align-items: center; gap: 6px; }
+}
 
 .suivi__aide { color: rgba(255, 255, 255, 0.85); margin-top: 28px; font-size: 0.85rem; text-align: center; }
 </style>

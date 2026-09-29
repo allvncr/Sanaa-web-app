@@ -132,13 +132,13 @@
           v-for="l in listeAffichee"
           :key="l._id"
           class="lm__parcelle"
-          :class="{ 'is-livree': l.livree, 'is-probleme': l.commande && l.commande.statut_livraison === 'Retour_echec' }"
+          :class="{ 'is-livree': estLivree(l), 'is-probleme': l.commande && l.commande.statut_livraison === 'Retour_echec' }"
           @click="ouvrir(l)"
         >
           <template v-if="l.commande">
             <div class="lm__parcelle-haut">
               <strong>{{ l.commande.numero }}</strong>
-              <el-tag v-if="l.livree" type="success" size="mini"><i class="el-icon-check" /> Livrée</el-tag>
+              <el-tag v-if="estLivree(l)" type="success" size="mini"><i class="el-icon-check" /> Livrée</el-tag>
               <el-tag v-else-if="l.commande.statut_livraison === 'Retour_echec'" type="danger" size="mini">Échec</el-tag>
               <span v-else class="lm__parcelle-jour">{{ formaterJourCourt(l.jour) }}</span>
             </div>
@@ -148,7 +148,7 @@
             <div v-if="l.commande.client && l.commande.client.adresse" class="lm__muted">
               <i class="el-icon-location-outline" /> {{ l.commande.client.adresse }}
             </div>
-            <div v-if="!l.livree" class="lm__parcelle-reste">
+            <div v-if="!estLivree(l)" class="lm__parcelle-reste">
               Reste à payer : {{ l.commande.reste_a_payer | montant }}
             </div>
             <div v-else class="lm__muted">
@@ -207,27 +207,33 @@ export default {
       const pays = this.paysContexte.liste[0];
       return pays ? (pays.moyens_paiement || []).filter((m) => m.actif) : [];
     },
-    restantes() {
-      return this.toutes.filter((l) => !l.livree);
-    },
+    // Le statut de la commande fait foi, pas le simple booléen `livree` de cette
+    // entrée de calendrier : une commande peut avoir été livrée/payée par un
+    // autre chemin que « Marquer livrée » ici (ancien flux, paiement saisi
+    // directement sur la commande...), auquel cas cette entrée resterait
+    // `livree: false` alors que la commande est bel et bien Livree — elle ne
+    // doit alors plus apparaître comme « restante » (retour terrain, 29/09/2026).
     enAttente() {
-      return this.restantes.filter((l) => !l.commande || l.commande.statut_livraison !== 'Retour_echec');
+      return this.toutes.filter((l) => !l.commande || l.commande.statut_livraison === 'En_livraison');
     },
     echecs() {
-      return this.restantes.filter((l) => l.commande && l.commande.statut_livraison === 'Retour_echec');
+      return this.toutes.filter((l) => l.commande && l.commande.statut_livraison === 'Retour_echec');
+    },
+    restantes() {
+      return [...this.enAttente, ...this.echecs];
     },
     livrees() {
       return this.toutes
-        .filter((l) => l.livree)
+        .filter((l) => l.commande && l.commande.statut_livraison === 'Livree')
         .slice()
-        .sort((a, b) => new Date(b.livree_le) - new Date(a.livree_le));
+        .sort((a, b) => new Date(b.livree_le || b.jour) - new Date(a.livree_le || a.jour));
     },
     totalAPercevoir() {
       return this.restantes.reduce((s, l) => s + (l.commande ? Number(l.commande.reste_a_payer) || 0 : 0), 0);
     },
     livreesAujourdhui() {
       const aujourdhui = cleJour(new Date());
-      return this.toutes.filter((l) => l.livree && l.jour === aujourdhui);
+      return this.toutes.filter((l) => this.estLivree(l) && l.jour === aujourdhui);
     },
     montantLivreAujourdhui() {
       return this.livreesAujourdhui.reduce((s, l) => s + Number(l.montant_recu || 0), 0);
@@ -245,6 +251,9 @@ export default {
   },
   methods: {
     formaterMontant,
+    estLivree(l) {
+      return !!(l.commande && l.commande.statut_livraison === 'Livree');
+    },
     formaterJourCourt(jour) {
       if (!jour) return '';
       return majuscule(depuisCle(jour).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
@@ -262,7 +271,7 @@ export default {
       }
     },
     ouvrir(l) {
-      if (!l.commande || l.livree) return;
+      if (!l.commande || this.estLivree(l)) return;
       this.active = l;
       this.modeProbleme = false;
       this.form = { montant_recu: Number(l.commande.reste_a_payer) || 0, moyen_paiement: '', frais_livraison: 0 };
