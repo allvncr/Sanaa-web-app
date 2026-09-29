@@ -80,22 +80,56 @@
       </template>
     </div>
 
-    <!-- Liste des livraisons du jour -->
+    <!-- Liste des livraisons -->
     <div v-else class="lm__liste">
-      <div class="lm__jour-nav">
-        <el-button size="small" icon="el-icon-arrow-left" circle @click="changerJour(-1)" />
-        <div class="lm__jour-label">
-          <strong>{{ libelleJour }}</strong>
-          <button v-if="jour !== aujourdhui" type="button" class="lm__aujourdhui" @click="allerAujourdhui">Aujourd'hui</button>
+      <div class="lm__totaux">
+        <div class="lm__total-item">
+          <strong class="lm__total-valeur">{{ restantes.length }}</strong>
+          <span class="lm__total-libelle">colis restant{{ restantes.length > 1 ? 's' : '' }}</span>
         </div>
-        <el-button size="small" icon="el-icon-arrow-right" circle @click="changerJour(1)" />
+        <div class="lm__total-item">
+          <strong class="lm__total-valeur">{{ totalAPercevoir | montant }}</strong>
+          <span class="lm__total-libelle">à percevoir</span>
+        </div>
+      </div>
+      <div v-if="livreesAujourdhui.length" class="lm__sous-total">
+        Livré aujourd'hui : {{ livreesAujourdhui.length }} · Encaissé {{ montantLivreAujourdhui | montant }}
+      </div>
+
+      <div class="lm__filtres">
+        <button type="button" :class="{ 'is-actif': statutFiltre === 'attente' }" @click="statutFiltre = 'attente'">
+          En attente ({{ enAttente.length }})
+        </button>
+        <button
+          v-if="echecs.length"
+          type="button"
+          :class="{ 'is-actif': statutFiltre === 'echec' }"
+          @click="statutFiltre = 'echec'"
+        >
+          Échec ({{ echecs.length }})
+        </button>
+        <button type="button" :class="{ 'is-actif': statutFiltre === 'livrees' }" @click="statutFiltre = 'livrees'">
+          Livrées
+        </button>
+      </div>
+
+      <div class="lm__filtre-jour">
+        <el-date-picker
+          v-model="jourFiltre"
+          type="date"
+          value-format="yyyy-MM-dd"
+          placeholder="Filtrer par jour"
+          size="small"
+          class="lm__date-picker"
+        />
+        <button v-if="jourFiltre" type="button" class="lm__effacer-jour" @click="jourFiltre = null">Tous les jours</button>
       </div>
 
       <div v-loading="chargement" class="lm__cartes">
-        <p v-if="!chargement && livraisons.length === 0" class="lm__vide">Aucune livraison prévue ce jour-là.</p>
+        <p v-if="!chargement && listeAffichee.length === 0" class="lm__vide">Rien à afficher ici.</p>
 
         <div
-          v-for="l in livraisons"
+          v-for="l in listeAffichee"
           :key="l._id"
           class="lm__parcelle"
           :class="{ 'is-livree': l.livree, 'is-probleme': l.commande && l.commande.statut_livraison === 'Retour_echec' }"
@@ -106,6 +140,7 @@
               <strong>{{ l.commande.numero }}</strong>
               <el-tag v-if="l.livree" type="success" size="mini"><i class="el-icon-check" /> Livrée</el-tag>
               <el-tag v-else-if="l.commande.statut_livraison === 'Retour_echec'" type="danger" size="mini">Échec</el-tag>
+              <span v-else class="lm__parcelle-jour">{{ formaterJourCourt(l.jour) }}</span>
             </div>
             <div class="lm__parcelle-client">
               {{ l.commande.client && l.commande.client.nom ? l.commande.client.nom : 'Client sans nom' }}
@@ -117,18 +152,13 @@
               Reste à payer : {{ l.commande.reste_a_payer | montant }}
             </div>
             <div v-else class="lm__muted">
-              {{ Number(l.montant_recu) | montant }} encaissé{{ Number(l.frais_livraison) > 0 ? ` + ${formaterMontant(l.frais_livraison)} de frais` : '' }}
+              {{ formaterJourCourt(l.jour) }} — {{ Number(l.montant_recu) | montant }} encaissé{{ Number(l.frais_livraison) > 0 ? ` + ${formaterMontant(l.frais_livraison)} de frais` : '' }}
             </div>
           </template>
           <template v-else>
             <strong class="lm__muted">Commande supprimée</strong>
           </template>
         </div>
-      </div>
-
-      <div v-if="resumeJour" class="lm__resume">
-        <span>{{ resumeJour.livrees }}/{{ livraisons.length }} livrée{{ resumeJour.livrees > 1 ? 's' : '' }}</span>
-        <span>Encaissé aujourd'hui : <strong>{{ resumeJour.montant | montant }}</strong></span>
       </div>
     </div>
   </div>
@@ -148,17 +178,22 @@ const depuisCle = (cle) => {
 };
 const majuscule = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
+// Fenêtre de récupération : couvre largement tout ce qui peut encore être en
+// attente (replanifié après échec, retardé...) sans ramener un historique de
+// livrées sans limite (retour V0.1, 29/09/2026 — écran repensé en liste globale
+// filtrable plutôt qu'en calendrier jour par jour).
+const JOURS_HISTORIQUE = 90;
+
 export default {
   name: 'LivraisonMobile',
   components: { StatutBadge },
   data() {
-    const aujourdhui = cleJour(new Date());
     return {
-      aujourdhui,
-      jour: aujourdhui,
-      livraisons: [],
+      toutes: [],
       chargement: false,
       requete: 0,
+      statutFiltre: 'attente',
+      jourFiltre: null,
       active: null,
       modeProbleme: false,
       enCours: false,
@@ -172,13 +207,34 @@ export default {
       const pays = this.paysContexte.liste[0];
       return pays ? (pays.moyens_paiement || []).filter((m) => m.actif) : [];
     },
-    libelleJour() {
-      return majuscule(depuisCle(this.jour).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }));
+    restantes() {
+      return this.toutes.filter((l) => !l.livree);
     },
-    resumeJour() {
-      const livrees = this.livraisons.filter((l) => l.livree);
-      if (livrees.length === 0) return null;
-      return { livrees: livrees.length, montant: livrees.reduce((s, l) => s + Number(l.montant_recu || 0), 0) };
+    enAttente() {
+      return this.restantes.filter((l) => !l.commande || l.commande.statut_livraison !== 'Retour_echec');
+    },
+    echecs() {
+      return this.restantes.filter((l) => l.commande && l.commande.statut_livraison === 'Retour_echec');
+    },
+    livrees() {
+      return this.toutes
+        .filter((l) => l.livree)
+        .slice()
+        .sort((a, b) => new Date(b.livree_le) - new Date(a.livree_le));
+    },
+    totalAPercevoir() {
+      return this.restantes.reduce((s, l) => s + (l.commande ? Number(l.commande.reste_a_payer) || 0 : 0), 0);
+    },
+    livreesAujourdhui() {
+      const aujourdhui = cleJour(new Date());
+      return this.toutes.filter((l) => l.livree && l.jour === aujourdhui);
+    },
+    montantLivreAujourdhui() {
+      return this.livreesAujourdhui.reduce((s, l) => s + Number(l.montant_recu || 0), 0);
+    },
+    listeAffichee() {
+      const base = this.statutFiltre === 'echec' ? this.echecs : this.statutFiltre === 'livrees' ? this.livrees : this.enAttente;
+      return this.jourFiltre ? base.filter((l) => l.jour === this.jourFiltre) : base;
     },
   },
   async mounted() {
@@ -189,25 +245,21 @@ export default {
   },
   methods: {
     formaterMontant,
+    formaterJourCourt(jour) {
+      if (!jour) return '';
+      return majuscule(depuisCle(jour).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+    },
     async charger() {
       const numeroRequete = ++this.requete;
       this.chargement = true;
       try {
-        const { data } = await livraisonsApi.lister({ du: this.jour, au: this.jour });
-        if (numeroRequete === this.requete) this.livraisons = data.data;
+        const d = new Date();
+        d.setDate(d.getDate() - JOURS_HISTORIQUE);
+        const { data } = await livraisonsApi.lister({ du: cleJour(d) });
+        if (numeroRequete === this.requete) this.toutes = data.data;
       } finally {
         if (numeroRequete === this.requete) this.chargement = false;
       }
-    },
-    changerJour(delta) {
-      const d = depuisCle(this.jour);
-      d.setDate(d.getDate() + delta);
-      this.jour = cleJour(d);
-      this.charger();
-    },
-    allerAujourdhui() {
-      this.jour = this.aujourdhui;
-      this.charger();
     },
     ouvrir(l) {
       if (!l.commande || l.livree) return;
@@ -290,17 +342,72 @@ export default {
 .lm__muted { color: var(--sanaa-text-muted); font-size: 0.85rem; }
 
 // --- liste
-.lm__jour-nav {
+.lm__totaux {
+  display: flex;
+  gap: 10px;
+  padding: 16px 16px 0;
+}
+.lm__total-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 16px 10px;
+  border-radius: var(--sanaa-radius-md);
+  background: var(--sanaa-accent-2-dark);
+  color: #fff;
+}
+.lm__total-valeur { font-size: 1.5rem; line-height: 1.1; }
+.lm__total-libelle { font-size: 0.75rem; opacity: 0.85; }
+
+.lm__sous-total {
+  margin: 10px 16px 0;
+  padding: 8px 12px;
+  border-radius: var(--sanaa-radius-sm, 8px);
+  background: rgba(76, 175, 80, 0.12);
+  color: var(--sanaa-success, #4caf50);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.lm__filtres {
+  display: flex;
+  gap: 8px;
+  padding: 16px 16px 0;
+  overflow-x: auto;
+}
+.lm__filtres button {
+  flex-shrink: 0;
+  border: 1px solid var(--sanaa-border);
+  background: var(--sanaa-surface);
+  color: var(--sanaa-text-muted);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.85rem;
+  &.is-actif {
+    background: var(--sanaa-accent-2-dark);
+    border-color: var(--sanaa-accent-2-dark);
+    color: #fff;
+  }
+}
+
+.lm__filtre-jour {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 16px;
+  gap: 8px;
+  padding: 10px 16px 0;
 }
-.lm__jour-label { text-align: center; font-size: 1rem; display: flex; flex-direction: column; gap: 2px; }
-.lm__aujourdhui { border: none; background: none; color: var(--sanaa-accent-2); font-size: 0.8rem; padding: 0; }
+.lm__date-picker { width: 170px; }
+.lm__effacer-jour {
+  border: none;
+  background: none;
+  color: var(--sanaa-accent-2);
+  font-size: 0.82rem;
+  padding: 0;
+}
 
-.lm__cartes { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; min-height: 120px; }
+.lm__cartes { padding: 16px 16px 0; display: flex; flex-direction: column; gap: 10px; min-height: 120px; }
 .lm__vide { text-align: center; color: var(--sanaa-text-muted); padding: 40px 0; }
 
 .lm__parcelle {
@@ -312,20 +419,9 @@ export default {
   &.is-probleme { border-left: 4px solid var(--sanaa-danger, #c0392b); }
 }
 .lm__parcelle-haut { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 1.02rem; }
+.lm__parcelle-jour { color: var(--sanaa-text-muted); font-size: 0.8rem; }
 .lm__parcelle-client { margin-bottom: 2px; }
 .lm__parcelle-reste { margin-top: 6px; font-weight: 600; color: var(--sanaa-danger, #c0392b); font-size: 0.9rem; }
-
-.lm__resume {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 14px 20px;
-  margin-top: 16px;
-  background: var(--sanaa-accent-2-dark);
-  color: #fff;
-  font-size: 0.9rem;
-}
 
 // --- détail / action
 .lm__detail { padding: 12px 16px; }
