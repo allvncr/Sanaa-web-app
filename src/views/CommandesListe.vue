@@ -135,6 +135,7 @@ export default {
     },
   },
   mounted() {
+    this.restaurerDepuisRoute();
     this.chargerCreateurs();
     this.charger();
   },
@@ -142,6 +143,37 @@ export default {
     clearTimeout(this.minuterie);
   },
   methods: {
+    // Filtres et pagination lus depuis l'URL au montage (retour V0.1,
+    // 30/09/2026) : ouvrir une commande puis faire « Retour » réaffiche la
+    // même liste filtrée, au lieu de tout réinitialiser silencieusement.
+    restaurerDepuisRoute() {
+      const q = this.$route.query;
+      this.filtres = {
+        q: q.q || '',
+        creePar: q.cree_par || '',
+        statut: q.statut || '',
+        plage: q.date_de && q.date_a ? [q.date_de, q.date_a] : [],
+      };
+      this.pagination.page = Number(q.page) || 1;
+      this.pagination.limite = Number(q.limite) || 20;
+    },
+    // Reflète l'état courant des filtres dans l'URL (sans ajouter d'entrée
+    // d'historique) pour que ce même état revienne si on navigue vers une
+    // commande puis qu'on revient en arrière.
+    synchroniserRoute() {
+      const [date_de, date_a] = this.filtres.plage && this.filtres.plage.length ? this.filtres.plage : [undefined, undefined];
+      const query = {};
+      if (this.filtres.q) query.q = this.filtres.q;
+      if (this.filtres.creePar) query.cree_par = this.filtres.creePar;
+      if (this.filtres.statut) query.statut = this.filtres.statut;
+      if (date_de) query.date_de = date_de;
+      if (date_a) query.date_a = date_a;
+      if (this.pagination.page > 1) query.page = String(this.pagination.page);
+      if (this.pagination.limite !== 20) query.limite = String(this.pagination.limite);
+      if (JSON.stringify(query) !== JSON.stringify(this.$route.query)) {
+        this.$router.replace({ query }).catch(() => {});
+      }
+    },
     async chargerCreateurs() {
       try {
         const { data } = await commandesApi.createurs({ pays_id: this.paysActifId || undefined });
@@ -173,6 +205,7 @@ export default {
     },
     async charger() {
       clearTimeout(this.minuterie);
+      this.synchroniserRoute();
       const numeroRequete = ++this.requete;
       this.chargement = true;
       const [date_de, date_a] = this.filtres.plage && this.filtres.plage.length ? this.filtres.plage : [undefined, undefined];
@@ -199,7 +232,7 @@ export default {
     ouvrir(row, column) {
       // Ne pas ouvrir la fiche quand le clic vise la case à cocher de sélection.
       if (column && column.type === 'selection') return;
-      this.$router.push({ name: 'commande-detail', params: { id: row._id } });
+      this.$router.push({ name: 'commande-detail', params: { id: row._id }, query: this.$route.query });
     },
     viderSelection() {
       this.$refs.tableau && this.$refs.tableau.clearSelection();

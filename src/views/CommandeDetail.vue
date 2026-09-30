@@ -319,7 +319,10 @@ export default {
       if (this.$route.query.retour === 'livraisons') {
         this.$router.push({ name: 'livraisons', query: { jour: this.$route.query.jour } });
       } else {
-        this.$router.push({ name: 'commandes' });
+        // La query courante est celle transmise par CommandesListe (ses filtres
+        // et sa pagination) — on la renvoie telle quelle pour que la liste
+        // réaffiche le même état plutôt que de tout réinitialiser.
+        this.$router.push({ name: 'commandes', query: this.$route.query });
       }
     },
     formaterJour(jour) {
