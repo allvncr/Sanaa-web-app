@@ -84,8 +84,8 @@
     <div v-else class="lm__liste">
       <div class="lm__totaux">
         <div class="lm__total-item">
-          <strong class="lm__total-valeur">{{ restantes.length }}</strong>
-          <span class="lm__total-libelle">colis restant{{ restantes.length > 1 ? 's' : '' }}</span>
+          <strong class="lm__total-valeur">{{ restantesFiltrees.length }}</strong>
+          <span class="lm__total-libelle">colis restant{{ restantesFiltrees.length > 1 ? 's' : '' }}</span>
         </div>
         <div class="lm__total-item">
           <strong class="lm__total-valeur">{{ totalAPercevoir | montant }}</strong>
@@ -228,8 +228,15 @@ export default {
         .slice()
         .sort((a, b) => new Date(b.livree_le || b.jour) - new Date(a.livree_le || a.jour));
     },
+    // Le bandeau de totaux reflète le filtre jour actif (retour terrain,
+    // 01/10/2026) : « tous les jours » par défaut, ou le jour choisi si un
+    // filtre est appliqué — indépendant du filtre de statut (En attente /
+    // Échec), qui a déjà ses propres compteurs sur chaque onglet.
+    restantesFiltrees() {
+      return this.jourFiltre ? this.restantes.filter((l) => l.jour === this.jourFiltre) : this.restantes;
+    },
     totalAPercevoir() {
-      return this.restantes.reduce((s, l) => s + (l.commande ? Number(l.commande.reste_a_payer) || 0 : 0), 0);
+      return this.restantesFiltrees.reduce((s, l) => s + (l.commande ? Number(l.commande.reste_a_payer) || 0 : 0), 0);
     },
     livreesAujourdhui() {
       const aujourdhui = cleJour(new Date());
