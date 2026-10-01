@@ -104,7 +104,10 @@
                 <el-input :value="ligne.prixUnitaire ? formaterMontant(ligne.prixUnitaire) : 'Aucun prix actif'" disabled />
               </el-form-item>
 
-              <el-form-item label="Précision modèle (optionnel)">
+              <el-form-item
+                :label="estFleurDuMois(ligne) ? 'Précision modèle (le mois)' : 'Précision modèle (optionnel)'"
+                :required="estFleurDuMois(ligne)"
+              >
                 <el-input v-model="ligne.detail_variante" placeholder="ex. mois, cheville..." />
               </el-form-item>
             </div>
@@ -112,7 +115,7 @@
             <el-form-item label="Prénom(s) / personnalisation à graver">
               <div class="personnalisation-liste">
                 <div v-for="(p, i) in ligne.personnalisation" :key="i" class="personnalisation-item">
-                  <el-input v-model="p.texte" placeholder="Prénom / texte" size="small" />
+                  <el-input v-model="p.texte" placeholder="Prénom / texte" size="small" @input="onChangeTextePersonnalisation(ligne, p)" />
                   <el-input v-model="p.police" placeholder="Police (optionnel)" size="small" style="width:140px" />
                   <el-button icon="el-icon-close" circle size="mini" @click="ligne.personnalisation.splice(i, 1)" />
                 </div>
@@ -198,6 +201,15 @@ function ligneVide() {
     personnalisation: [{ texte: '', police: '', position: 0 }],
     quantite: 1, prixUnitaire: 0, sousTotal: 0, replie: false,
   };
+}
+
+// Retour terrain (01/10/2026) : sur les modèles "Fleur du mois", la police de
+// gravure du prénom suit une convention fixe selon sa longueur — 20 pour un
+// prénom court (1 à 5 caractères), 21 au-delà. Reste modifiable manuellement
+// ensuite, ce n'est qu'un pré-remplissage.
+function policePourLongueur(longueur) {
+  if (longueur <= 0) return '';
+  return longueur <= 5 ? '20' : '21';
 }
 
 function commandeVide(pays_id) {
@@ -287,10 +299,25 @@ export default {
     ajouterLigne() {
       this.form.lignes.push(ligneVide());
     },
+    // "Fleur du mois" identifié par le nom du produit — aucun champ dédié dans
+    // le catalogue, cette gamme se reconnaît toujours à ce nom (ex. "COLLIER
+    // FLEUR DU MOIS & PRENOM").
+    estFleurDuMois(ligne) {
+      const produit = this.produits.find((p) => p._id === ligne.produit_id);
+      return !!(produit && /FLEUR DU MOIS/i.test(produit.nom));
+    },
+    onChangeTextePersonnalisation(ligne, p) {
+      if (this.estFleurDuMois(ligne)) {
+        p.police = policePourLongueur(p.texte.trim().length);
+      }
+    },
     onChangeProduit(ligne) {
       ligne.variante_id = '';
       ligne.prixUnitaire = 0;
       ligne.sousTotal = 0;
+      if (this.estFleurDuMois(ligne)) {
+        ligne.personnalisation.forEach((p) => { p.police = policePourLongueur(p.texte.trim().length); });
+      }
     },
     async onChangeVariante(ligne) {
       const produit = this.produits.find((p) => p._id === ligne.produit_id);
@@ -311,6 +338,11 @@ export default {
     async enregistrer() {
       if (!this.form.client.telephone_whatsapp || this.form.lignes.length === 0) {
         this.$store.dispatch('notifications/erreur', 'Numéro de téléphone du client et au moins une ligne sont requis.');
+        return;
+      }
+      const ligneSansModele = this.form.lignes.find((l) => this.estFleurDuMois(l) && !String(l.detail_variante || '').trim());
+      if (ligneSansModele) {
+        this.$store.dispatch('notifications/erreur', 'Précisez le modèle (le mois) pour chaque ligne « Fleur du mois ».');
         return;
       }
       if (this.form.avance.montant > 0 && !this.form.avance.moyen_paiement) {

@@ -4,12 +4,19 @@ import store from '@/store';
 
 Vue.use(Router);
 
-// Accueil selon le rôle : un Livreur n'a pas accès au dashboard, l'y renvoyer
-// (redirect "/" statique, ou "*") le bloquerait silencieusement sur place.
+// Accueil selon le rôle : renvoyer tout le monde vers "dashboard" (redirect
+// "/" statique, ou "*") bloquerait silencieusement sur place un rôle sans
+// accès au dashboard (Livreur, et Gestionnaire depuis le 01/10/2026) — la
+// garde de navigation refuserait la permission sans jamais les rediriger
+// ailleurs.
 function accueilSelonRole() {
-  return store.state.auth.utilisateur && store.state.auth.utilisateur.role.nom === 'Livreur'
-    ? { name: 'mes-livraisons' }
-    : { name: 'dashboard' };
+  const utilisateur = store.state.auth.utilisateur;
+  if (!utilisateur) return { name: 'dashboard' };
+  if (utilisateur.role.nom === 'Livreur') return { name: 'mes-livraisons' };
+  if (store.getters['auth/aPermission']('dashboard:voir_pays') || store.getters['auth/aPermission']('dashboard:voir_global')) {
+    return { name: 'dashboard' };
+  }
+  return { name: 'commandes' };
 }
 
 const routes = [
