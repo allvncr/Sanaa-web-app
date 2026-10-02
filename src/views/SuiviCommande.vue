@@ -80,14 +80,57 @@
           <h3>Votre/vos bijou(x)</h3>
           <ul class="suivi__liste-articles">
             <li v-for="(a, i) in resultat.articles" :key="i">
-              <div class="suivi__article-titre">
-                {{ a.produit }}<template v-if="a.couleur"> — {{ a.couleur }}</template>
-                <template v-if="a.quantite > 1"> ×{{ a.quantite }}</template>
+              <div class="suivi__article-ligne">
+                <div class="suivi__article-titre">
+                  {{ a.produit }}<template v-if="a.couleur"> — {{ a.couleur }}</template>
+                </div>
+                <strong class="suivi__article-prix">{{ fmt(a.sous_total) }}</strong>
               </div>
+              <div v-if="a.quantite > 1" class="suivi__article-detail">{{ a.quantite }} × {{ fmt(a.prix_unitaire) }}</div>
               <div v-if="a.detail" class="suivi__article-detail">{{ a.detail }}</div>
               <div v-if="a.personnalisation" class="suivi__article-detail">Personnalisation : « {{ a.personnalisation }} »</div>
             </li>
           </ul>
+        </div>
+
+        <div v-if="resultat.finances" class="suivi__paiement">
+          <h3>Paiement</h3>
+          <div class="suivi__paiement-ligne">
+            <span>Total des bijoux</span>
+            <span>{{ fmt(resultat.finances.total) }}</span>
+          </div>
+          <div v-if="resultat.finances.reduction > 0" class="suivi__paiement-ligne suivi__paiement-ligne--vert">
+            <span>Réduction</span>
+            <span>− {{ fmt(resultat.finances.reduction) }}</span>
+          </div>
+          <div v-if="resultat.finances.reduction > 0" class="suivi__paiement-ligne suivi__paiement-ligne--gras">
+            <span>Total à payer</span>
+            <span>{{ fmt(resultat.finances.total_net) }}</span>
+          </div>
+
+          <template v-if="resultat.finances.paiements.length">
+            <div v-for="(p, i) in resultat.finances.paiements" :key="i" class="suivi__paiement-ligne suivi__paiement-ligne--vert">
+              <span>
+                {{ p.type === 'avance' ? 'Avance versée' : 'Paiement reçu' }}
+                <small>{{ p.date | dateFr }}<template v-if="p.moyen"> · {{ p.moyen }}</template></small>
+              </span>
+              <span>− {{ fmt(p.montant) }}</span>
+            </div>
+          </template>
+          <div v-else class="suivi__paiement-ligne suivi__paiement-ligne--discret">
+            <span>Aucune avance enregistrée</span>
+            <span>{{ fmt(0) }}</span>
+          </div>
+
+          <div class="suivi__reste" :class="{ 'is-regle': resultat.finances.reste_a_payer === 0 }">
+            <template v-if="resultat.finances.reste_a_payer === 0">
+              <i class="el-icon-circle-check" /> Commande entièrement réglée
+            </template>
+            <template v-else>
+              <span class="suivi__reste-label">{{ livree ? 'Reste à payer' : 'Reste à payer à la livraison' }}</span>
+              <strong class="suivi__reste-montant">{{ fmt(resultat.finances.reste_a_payer) }}</strong>
+            </template>
+          </div>
         </div>
 
         <div v-if="resultat.client" class="suivi__livraison">
@@ -107,7 +150,7 @@
 
 <script>
 import suiviApi from '@/services/suivi.api';
-import { formaterDate } from '@/utils/format';
+import { formaterDate, formaterMontant } from '@/utils/format';
 
 export default {
   name: 'SuiviCommande',
@@ -158,6 +201,10 @@ export default {
       } finally {
         this.chargement = false;
       }
+    },
+    fmt(montant) {
+      const devise = this.resultat && this.resultat.finances ? this.resultat.finances.devise : '';
+      return formaterMontant(montant, devise);
     },
     nouvelleRecherche() {
       this.resultat = null;
@@ -300,8 +347,44 @@ export default {
   letter-spacing: 0.04em;
 }
 .suivi__liste-articles { margin: 0; padding: 0; list-style: none; }
-.suivi__liste-articles li:not(:last-child) { margin-bottom: 10px; }
+.suivi__liste-articles li:not(:last-child) { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--sanaa-border); }
+.suivi__article-ligne { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.suivi__article-prix { white-space: nowrap; }
 .suivi__article-titre { font-weight: 600; }
+
+.suivi__paiement {
+  margin-top: 22px;
+  padding: 16px;
+  border-radius: var(--sanaa-radius-md);
+  background: var(--sanaa-bg);
+  h3 { font-size: 0.9rem; margin: 0 0 10px; color: var(--sanaa-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+}
+.suivi__paiement-ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 0.92rem;
+  small { display: block; color: var(--sanaa-text-muted); font-size: 0.75rem; }
+  &--vert { color: var(--sanaa-success, #4caf50); }
+  &--gras { font-weight: 700; border-top: 1px solid var(--sanaa-border); margin-top: 4px; padding-top: 8px; }
+  &--discret { color: var(--sanaa-text-muted); }
+}
+.suivi__reste {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: var(--sanaa-radius-md);
+  background: var(--sanaa-accent-2-dark);
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  &.is-regle { justify-content: center; background: rgba(76, 175, 80, 0.15); color: var(--sanaa-success, #4caf50); font-weight: 600; gap: 6px; }
+}
+.suivi__reste-label { font-size: 0.85rem; opacity: 0.9; }
+.suivi__reste-montant { font-size: 1.25rem; white-space: nowrap; }
 .suivi__article-detail { color: var(--sanaa-text-muted); font-size: 0.85rem; margin-top: 2px; }
 
 .suivi__livraison {
