@@ -170,6 +170,18 @@ router.beforeEach(async (to, from, next) => {
   }
 
   if (to.meta.permission && !store.getters['auth/aPermission'](to.meta.permission)) {
+    // Écran refusé : on envoie l'utilisateur sur SON accueil plutôt que de le
+    // laisser bloqué. Cas typique : le redirect "?redirect=/dashboard" mémorisé
+    // avant la connexion (visite de "/" sans session, quand on ignore encore
+    // le rôle) qui renvoyait un Gestionnaire/Livreur sur un écran interdit juste
+    // après s'être connecté. L'alerte n'apparaît que pour une navigation
+    // volontaire dans l'appli, pas pour ce renvoi automatique.
+    const accueil = router.resolve(accueilSelonRole()).route;
+    const accueilAutorise = !accueil.meta.permission || store.getters['auth/aPermission'](accueil.meta.permission);
+    if (accueilAutorise && accueil.name !== to.name) {
+      if (from.name && from.name !== 'connexion') store.dispatch('notifications/erreur', "Vous n'avez pas la permission d'accéder à cet écran.");
+      return next({ name: accueil.name, replace: true });
+    }
     store.dispatch('notifications/erreur', "Vous n'avez pas la permission d'accéder à cet écran.");
     return next(false);
   }
