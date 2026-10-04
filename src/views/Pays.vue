@@ -36,6 +36,9 @@
           <el-input v-model="form.code" maxlength="4" :disabled="!!paysActuel" />
         </el-form-item>
         <el-form-item label="Nom" required><el-input v-model="form.nom" /></el-form-item>
+        <el-form-item label="Indicatif téléphonique (ex. 225) — pour les liens WhatsApp">
+          <el-input v-model="form.indicatif" placeholder="225" maxlength="4" />
+        </el-form-item>
         <el-form-item label="Devise locale" required>
           <el-select v-model="form.devise_locale_id" style="width:100%">
             <el-option v-for="d in devises" :key="d._id" :value="d._id" :label="`${d.code} — ${d.nom}`" />
@@ -65,7 +68,7 @@ import paysApi from '@/services/pays.api';
 import referentielsApi from '@/services/referentiels.api';
 
 function formeVide() {
-  return { code: '', nom: '', devise_locale_id: '', est_pays_historique_sans_suffixe: false, actif: true };
+  return { code: '', nom: '', indicatif: '', devise_locale_id: '', est_pays_historique_sans_suffixe: false, actif: true };
 }
 
 export default {
@@ -106,6 +109,7 @@ export default {
       this.form = {
         code: p.code,
         nom: p.nom,
+        indicatif: p.indicatif || '',
         devise_locale_id: p.devise_locale_id ? p.devise_locale_id._id : '',
         est_pays_historique_sans_suffixe: p.est_pays_historique_sans_suffixe,
         actif: p.actif,

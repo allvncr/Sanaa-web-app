@@ -91,6 +91,17 @@
         <el-table-column label="Saisie par" min-width="130" class-name="hide-mobile">
           <template slot-scope="{ row }">{{ row.cree_par && row.cree_par.nom ? row.cree_par.nom : '—' }}</template>
         </el-table-column>
+        <el-table-column label="" width="56" align="center">
+          <template slot-scope="{ row }">
+            <el-button
+              type="text"
+              class="btn-whatsapp-ligne"
+              icon="el-icon-chat-dot-round"
+              title="Envoyer un message WhatsApp au client"
+              @click.stop="envoyerWhatsApp(row)"
+            />
+          </template>
+        </el-table-column>
       </el-table>
       <p v-if="!chargement && commandes.length === 0" class="sanaa-empty">Aucune commande trouvée.</p>
       <PaginationBarre :page="pagination.page" :limite="pagination.limite" :total="pagination.total" @update:page="changerPage" @update:limite="changerLimite" />
@@ -103,6 +114,7 @@ import { mapState } from 'vuex';
 import commandesApi from '@/services/commandes.api';
 import StatutBadge from '@/components/common/StatutBadge.vue';
 import PaginationBarre from '@/components/common/PaginationBarre.vue';
+import { lienWhatsApp } from '@/utils/whatsapp';
 
 export default {
   name: 'CommandesListe',
@@ -234,6 +246,16 @@ export default {
       if (column && column.type === 'selection') return;
       this.$router.push({ name: 'commande-detail', params: { id: row._id }, query: this.$route.query });
     },
+    envoyerWhatsApp(row) {
+      const paysId = row.pays_id && (row.pays_id._id || row.pays_id);
+      const pays = this.$store.state.paysContexte.liste.find((p) => p._id === paysId) || row.pays_id;
+      const lien = lienWhatsApp(row, pays);
+      if (!lien) {
+        this.$store.dispatch('notifications/erreur', `Numéro du client absent ou illisible pour ${row.numero}.`);
+        return;
+      }
+      window.open(lien, '_blank', 'noopener');
+    },
     viderSelection() {
       this.$refs.tableau && this.$refs.tableau.clearSelection();
       this.selection = [];
@@ -284,6 +306,7 @@ export default {
 <style scoped>
 .el-table >>> .el-table__row { cursor: pointer; }
 .recherche { width: 340px; max-width: 100%; }
+.btn-whatsapp-ligne { color: #25D366; font-size: 1.25rem; padding: 0; }
 .barre-lot {
   display: flex;
   flex-wrap: wrap;

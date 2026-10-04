@@ -4,6 +4,7 @@
       <div class="sanaa-page-header">
         <h1>Commande {{ commande.numero }}</h1>
         <div class="entete-actions">
+          <el-button icon="el-icon-chat-dot-round" class="btn-whatsapp" @click="envoyerWhatsApp">Envoyer sur WhatsApp</el-button>
           <el-button icon="el-icon-link" @click="copierLienSuivi">Lien de suivi client</el-button>
           <el-button v-can="'commandes:modifier'" type="primary" icon="el-icon-edit" @click="dialogueEdition = true">Modifier</el-button>
           <el-button v-can="'commandes:supprimer'" type="danger" plain icon="el-icon-delete" :loading="suppression" @click="supprimerCommande">Supprimer</el-button>
@@ -230,6 +231,7 @@ import StatutBadge from '@/components/common/StatutBadge.vue';
 import CommandeEditDialog from '@/components/commandes/CommandeEditDialog.vue';
 import CommandeHistorique from '@/components/commandes/CommandeHistorique.vue';
 import { formaterMontant as montantFormate } from '@/utils/format';
+import { lienWhatsApp } from '@/utils/whatsapp';
 
 const TRANSITIONS = {
   Nouvelle: ['Confirmee', 'Annulee', 'Refusee'],
@@ -314,6 +316,19 @@ export default {
       } catch (e) {
         this.$alert(lien, 'Lien de suivi (copie manuelle)', { confirmButtonText: 'Fermer' });
       }
+    },
+    // Ouvre WhatsApp (celui de l'appareil utilisé, donc le bon numéro du pays)
+    // sur la conversation du client, message déjà écrit selon l'étape.
+    envoyerWhatsApp() {
+      const paysId = this.commande.pays_id && (this.commande.pays_id._id || this.commande.pays_id);
+      const pays = this.$store.state.paysContexte.liste.find((p) => p._id === paysId) || this.commande.pays_id;
+      const jour = this.joursLivraison.length ? this.formaterJour(this.joursLivraison[this.joursLivraison.length - 1]) : '';
+      const lien = lienWhatsApp(this.commande, pays, { jourLivraison: jour });
+      if (!lien) {
+        this.$store.dispatch('notifications/erreur', "Numéro du client absent ou illisible : impossible d'ouvrir WhatsApp.");
+        return;
+      }
+      window.open(lien, '_blank', 'noopener');
     },
     retour() {
       if (this.$route.query.retour === 'livraisons') {
@@ -452,6 +467,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.btn-whatsapp { color: #1da851; border-color: #25D366; }
 .livraison-prevue { color: var(--sanaa-accent-2-dark); font-weight: 600; font-size: 0.9rem; }
 // `>>>` n'est pas un sélecteur CSS valide pour Sass (ce fichier est en
 // lang="scss", contrairement aux autres vues) : ::v-deep est équivalent et
