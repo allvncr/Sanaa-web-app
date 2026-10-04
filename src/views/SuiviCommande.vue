@@ -122,6 +122,11 @@
             <span>{{ fmt(0) }}</span>
           </div>
 
+          <div v-if="resultat.finances.frais_regles > 0" class="suivi__paiement-ligne suivi__paiement-ligne--discret">
+            <span>dont frais de livraison réglés d'avance</span>
+            <span>{{ fmt(resultat.finances.frais_regles) }}</span>
+          </div>
+
           <template v-if="resultat.finances.frais_livraison > 0">
             <div class="suivi__paiement-ligne suivi__paiement-ligne--gras">
               <span>Reste à payer sur la commande</span>

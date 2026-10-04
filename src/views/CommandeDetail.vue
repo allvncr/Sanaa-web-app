@@ -62,6 +62,9 @@
             Total {{ commande.total | montant }}
             <template v-if="commande.reduction > 0"> — Réduction -{{ commande.reduction | montant }}</template>
           </span>
+          <span v-if="Number(commande.surplus_regle) > 0" class="sanaa-kpi-sub kpi-frais-regles">
+            Frais de livraison déjà réglés d'avance : {{ commande.surplus_regle | montant }}
+          </span>
         </div>
       </div>
 
@@ -468,6 +471,7 @@ export default {
 
 <style lang="scss" scoped>
 .btn-whatsapp { color: #1da851; border-color: #25D366; }
+.kpi-frais-regles { color: var(--sanaa-success, #4caf50); font-weight: 600; }
 .livraison-prevue { color: var(--sanaa-accent-2-dark); font-weight: 600; font-size: 0.9rem; }
 // `>>>` n'est pas un sélecteur CSS valide pour Sass (ce fichier est en
 // lang="scss", contrairement aux autres vues) : ::v-deep est équivalent et

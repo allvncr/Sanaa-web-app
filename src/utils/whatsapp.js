@@ -46,7 +46,9 @@ export function messageCommande(commande, { lien, devise = '', jourLivraison = '
   const prenom = client.nom ? String(client.nom).trim().split(/\s+/)[0] : '';
   const salut = prenom ? `Bonjour ${prenom},` : 'Bonjour,';
   const reste = Number(commande.reste_a_payer) || 0;
-  const frais = Number(fraisLivraison) || 0;
+  // Le surplus déjà versé par le client compte comme frais de livraison réglés.
+  const frais = Math.max(0, (Number(fraisLivraison) || 0) - (Number(commande.surplus_regle) || 0));
+  const fraisDejaRegles = Number(commande.surplus_regle) > 0;
   // Les frais de livraison du pays ne sont pas inclus dans le solde de la
   // commande : on les ajoute explicitement pour que le client sache le total à
   // prévoir le jour de la livraison.
@@ -57,6 +59,8 @@ export function messageCommande(commande, { lien, devise = '', jourLivraison = '
     rappelSolde = ` Le solde restant à régler est de ${formaterMontant(reste, devise)}.`;
   } else if (frais > 0) {
     rappelSolde = ` Votre commande est entièrement réglée, il ne restera que les frais de livraison de ${formaterMontant(frais, devise)} à régler à la livraison.`;
+  } else if (fraisDejaRegles) {
+    rappelSolde = ' Votre commande et vos frais de livraison sont entièrement réglés, il n\'y a rien à payer à la livraison.';
   }
   const numero = commande.numero;
 

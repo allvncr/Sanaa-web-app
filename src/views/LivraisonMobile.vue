@@ -99,6 +99,8 @@
                 À encaisser <strong>{{ l.commande.reste_a_payer | montant }}</strong>
               </span>
               <span v-else class="montant montant--regle"><i class="el-icon-circle-check" /> Déjà réglé</span>
+              <span v-if="Number(l.commande.surplus_regle) > 0" class="montant montant--regle montant--ligne"><i class="el-icon-check" /> Frais de livraison déjà payés</span>
+              <span v-else-if="Number(l.commande.frais_livraison_du) > 0" class="montant montant--ligne muted">+ {{ l.commande.frais_livraison_du | montant }} de frais</span>
             </div>
             <div v-else class="montant montant--regle">
               {{ Number(l.montant_recu) > 0 ? `${formaterMontant(l.montant_recu)} encaissé` : 'Réglé' }}<template v-if="Number(l.frais_livraison) > 0"> · {{ formaterMontant(l.frais_livraison) }} de frais</template>
@@ -201,6 +203,11 @@
                 <strong>{{ resteActif | montant }}</strong>
               </template>
             </div>
+            <p v-if="Number(active.commande.surplus_regle) > 0" class="note note--ok">
+              <i class="el-icon-circle-check" /> Le client a déjà réglé ses frais de livraison d'avance ({{ active.commande.surplus_regle | montant }}).
+              <template v-if="Number(active.commande.frais_livraison_du) > 0">Il reste {{ active.commande.frais_livraison_du | montant }} de frais à percevoir.</template>
+              <template v-else>Ne percevez rien pour la livraison.</template>
+            </p>
           </div>
 
           <!-- Récap d'une livraison déjà faite -->
@@ -234,10 +241,13 @@
                 </div>
               </template>
 
-              <p class="bloc__titre bloc__titre--espace">Frais de livraison perçus <span class="muted">(optionnel)</span></p>
+              <p class="bloc__titre bloc__titre--espace">Frais de livraison perçus <span class="muted">(modifiable)</span></p>
               <div class="champ-gros champ-gros--petit">
                 <input v-model="form.frais_livraison" type="number" inputmode="decimal" min="0" placeholder="0" />
               </div>
+              <p v-if="Number(active.commande.frais_livraison_standard) > 0" class="note">
+                Tarif habituel : {{ active.commande.frais_livraison_standard | montant }}. Changez le montant si la livraison coûte plus (autre zone, expédition…).
+              </p>
             </div>
           </template>
 
@@ -397,7 +407,7 @@ export default {
     dejaVerse() {
       if (!this.active || !this.active.commande) return 0;
       const c = this.active.commande;
-      return Math.max(0, Number(c.total) - Number(c.reduction || 0) - Number(c.reste_a_payer || 0));
+      return Math.max(0, Number(c.total) - Number(c.reduction || 0) - Number(c.reste_a_payer || 0) + Number(c.surplus_regle || 0));
     },
   },
   async mounted() {
@@ -484,7 +494,8 @@ export default {
       this.active = l;
       this.modeProbleme = false;
       const reste = Number(l.commande.reste_a_payer) || 0;
-      this.form = { montant_recu: reste > 0 ? String(reste) : '', moyen_paiement: '', frais_livraison: '' };
+      const fraisDus = Number(l.commande.frais_livraison_du) || 0;
+      this.form = { montant_recu: reste > 0 ? String(reste) : '', moyen_paiement: '', frais_livraison: fraisDus > 0 ? String(fraisDus) : '' };
     },
     fermer() {
       this.active = null;
@@ -554,6 +565,8 @@ $barre-onglets: 64px;
   -webkit-user-select: none;
 }
 .muted { color: var(--sanaa-text-muted); font-size: 0.85rem; }
+.note { margin: 10px 0 0 !important; font-size: 0.82rem; color: var(--sanaa-text-muted); line-height: 1.4; &--ok { color: var(--sanaa-success, #4caf50); font-weight: 600; } }
+.montant--ligne { display: block; margin-top: 2px; font-size: 0.78rem; }
 
 // ---------- barre du haut
 .app__bar {
