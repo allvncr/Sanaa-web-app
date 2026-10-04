@@ -42,7 +42,7 @@
           </div>
           <div>
             <strong>{{ montantLivreAujourdhui | montant }}</strong>
-            <span>encaissé</span>
+            <span>à remettre</span>
           </div>
         </div>
         <div v-if="progressionTotal > 0" class="hero__progression">
@@ -103,7 +103,7 @@
               <span v-else-if="Number(l.commande.frais_livraison_du) > 0" class="montant montant--ligne muted">+ {{ l.commande.frais_livraison_du | montant }} de frais</span>
             </div>
             <div v-else class="montant montant--regle">
-              {{ Number(l.montant_recu) > 0 ? `${formaterMontant(l.montant_recu)} encaissé` : 'Réglé' }}<template v-if="Number(l.frais_livraison) > 0"> · {{ formaterMontant(l.frais_livraison) }} de frais</template>
+              {{ Number(l.montant_recu) > 0 ? `${formaterMontant(l.montant_recu)} remis` : 'Réglé' }}<template v-if="Number(l.frais_livraison) > 0"> · {{ formaterMontant(l.frais_livraison) }} de frais</template>
             </div>
 
             <div v-if="!estLivree(l)" class="carte__raccourcis" @click.stop>
@@ -213,21 +213,24 @@
           <!-- Récap d'une livraison déjà faite -->
           <div v-if="estLivree(active)" class="bloc bloc--ok">
             <p class="bloc__titre">Livraison effectuée</p>
-            <div class="ligne"><span>Encaissé à la livraison</span><span>{{ Number(active.montant_recu) | montant }}</span></div>
-            <div class="ligne"><span>Frais de livraison perçus</span><span>{{ Number(active.frais_livraison) | montant }}</span></div>
+            <div class="ligne"><span>Total reçu du client</span><span>{{ Number(active.total_recu_client) | montant }}</span></div>
+            <div class="ligne"><span>Frais gardés par le livreur</span><span>− {{ Number(active.frais_livraison) | montant }}</span></div>
+            <div class="ligne ligne--gras"><span>Remis à SANAA</span><span>{{ Number(active.montant_recu) | montant }}</span></div>
+            <p v-if="Number(active.surcout_livraison) > 0" class="note">Surcoût de livraison pris en charge par SANAA : {{ Number(active.surcout_livraison) | montant }}.</p>
             <div v-if="active.livree_le" class="ligne"><span>Le</span><span>{{ active.livree_le | dateHeureFr }}</span></div>
           </div>
 
           <!-- Saisie de la livraison -->
           <template v-else-if="!modeProbleme">
             <div class="bloc">
-              <p class="bloc__titre">Montant reçu du client</p>
+              <p class="bloc__titre">Total reçu du client <span class="muted">(solde + frais de livraison)</span></p>
               <div class="champ-gros">
-                <input v-model="form.montant_recu" type="number" inputmode="decimal" min="0" placeholder="0" />
-                <button v-if="resteActif > 0" type="button" class="champ-gros__tout" @click="toutRecevoir">Tout</button>
+                <input v-model="form.total_recu" type="number" inputmode="decimal" min="0" placeholder="0" />
+                <button v-if="montantAnnonce > 0" type="button" class="champ-gros__tout" @click="toutRecevoir">Tout</button>
               </div>
+              <p v-if="montantAnnonce > 0" class="note">Montant annoncé au client : {{ montantAnnonce | montant }}.</p>
 
-              <template v-if="montantNum > 0">
+              <template v-if="totalRecuNum > 0">
                 <p class="bloc__titre bloc__titre--espace">Moyen de paiement</p>
                 <div class="moyens">
                   <button
@@ -241,13 +244,21 @@
                 </div>
               </template>
 
-              <p class="bloc__titre bloc__titre--espace">Frais de livraison perçus <span class="muted">(modifiable)</span></p>
+              <p class="bloc__titre bloc__titre--espace">Frais de livraison que vous gardez <span class="muted">(modifiable)</span></p>
               <div class="champ-gros champ-gros--petit">
                 <input v-model="form.frais_livraison" type="number" inputmode="decimal" min="0" placeholder="0" />
               </div>
               <p v-if="Number(active.commande.frais_livraison_standard) > 0" class="note">
-                Tarif habituel : {{ active.commande.frais_livraison_standard | montant }}. Changez le montant si la livraison coûte plus (autre zone, expédition…).
+                Tarif habituel : {{ active.commande.frais_livraison_standard | montant }}. Changez le montant si la livraison de cette zone coûte plus (ou une expédition).
               </p>
+
+              <div v-if="totalRecuNum > 0 || fraisNum > 0" class="recap-caisse">
+                <div class="ligne"><span>Total reçu du client</span><span>{{ totalRecuNum | montant }}</span></div>
+                <div class="ligne"><span>Frais que vous gardez</span><span>− {{ fraisNum | montant }}</span></div>
+                <div class="ligne ligne--gras" :class="{ 'ligne--rouge': fraisTropEleves }"><span>À remettre à SANAA</span><span>{{ aRemettre | montant }}</span></div>
+                <p v-if="fraisTropEleves" class="note note--ko">Les frais ne peuvent pas dépasser le montant reçu.</p>
+                <p v-else-if="surcout > 0" class="note">Surcoût de livraison de {{ surcout | montant }} : il est pris en charge par SANAA (retiré de ce que SANAA encaisse), pas par le client ni par vous.</p>
+              </div>
             </div>
           </template>
 
@@ -311,7 +322,7 @@ export default {
       active: null,
       modeProbleme: false,
       enCours: false,
-      form: { montant_recu: '', moyen_paiement: '', frais_livraison: '' },
+      form: { total_recu: '', moyen_paiement: '', frais_livraison: '' },
       pull: 0,
       pullActif: false,
       pullDepart: 0,
@@ -398,8 +409,30 @@ export default {
       const base = this.statutFiltre === 'echec' ? this.echecs : this.statutFiltre === 'livrees' ? this.livrees : this.enAttente;
       return this.jourFiltre ? base.filter((l) => l.jour === this.jourFiltre) : base;
     },
-    montantNum() {
-      return Number(this.form.montant_recu) || 0;
+    totalRecuNum() {
+      return Number(this.form.total_recu) || 0;
+    },
+    fraisNum() {
+      return Number(this.form.frais_livraison) || 0;
+    },
+    // Ce que le client doit remettre le jour de la livraison : solde + frais
+    // standard encore dus (déduction faite de ce qu'il a déjà réglé d'avance).
+    montantAnnonce() {
+      if (!this.active || !this.active.commande) return 0;
+      return (Number(this.active.commande.reste_a_payer) || 0) + (Number(this.active.commande.frais_livraison_du) || 0);
+    },
+    // Règle de caisse : le livreur garde ses frais réels, SANAA reçoit le reste.
+    aRemettre() {
+      return Math.max(0, this.totalRecuNum - this.fraisNum);
+    },
+    fraisTropEleves() {
+      return this.fraisNum > this.totalRecuNum;
+    },
+    // Écart entre les frais gardés et les frais annoncés au client : supporté
+    // par SANAA (il est retiré de ce qu'elle encaisse).
+    surcout() {
+      const annonces = this.active && this.active.commande ? Number(this.active.commande.frais_livraison_du) || 0 : 0;
+      return this.fraisNum - annonces;
     },
     resteActif() {
       return this.active && this.active.commande ? Number(this.active.commande.reste_a_payer) || 0 : 0;
@@ -495,29 +528,35 @@ export default {
       this.modeProbleme = false;
       const reste = Number(l.commande.reste_a_payer) || 0;
       const fraisDus = Number(l.commande.frais_livraison_du) || 0;
-      this.form = { montant_recu: reste > 0 ? String(reste) : '', moyen_paiement: '', frais_livraison: fraisDus > 0 ? String(fraisDus) : '' };
+      // Montant annoncé au client = solde + frais de livraison encore dus.
+      const annonce = reste + fraisDus;
+      this.form = { total_recu: annonce > 0 ? String(annonce) : '', moyen_paiement: '', frais_livraison: fraisDus > 0 ? String(fraisDus) : '' };
     },
     fermer() {
       this.active = null;
       this.modeProbleme = false;
     },
     toutRecevoir() {
-      this.form.montant_recu = String(this.resteActif);
+      this.form.total_recu = String(this.montantAnnonce);
     },
     retourTactile() {
       if (navigator.vibrate) navigator.vibrate(40);
     },
     async confirmerLivraison() {
-      if (this.montantNum > 0 && !this.form.moyen_paiement) {
+      if (this.fraisTropEleves) {
+        this.$store.dispatch('notifications/erreur', 'Les frais de livraison ne peuvent pas dépasser le montant reçu du client.');
+        return;
+      }
+      if (this.totalRecuNum > 0 && !this.form.moyen_paiement) {
         this.$store.dispatch('notifications/erreur', 'Choisissez le moyen de paiement reçu.');
         return;
       }
       this.enCours = true;
       try {
         await livraisonsApi.marquerLivree(this.active._id, {
-          montant_recu: this.montantNum,
+          total_recu_client: this.totalRecuNum,
           moyen_paiement: this.form.moyen_paiement,
-          frais_livraison: Number(this.form.frais_livraison) || 0,
+          frais_livraison: this.fraisNum,
         });
         this.retourTactile();
         this.$store.dispatch('notifications/succes', `${this.active.commande.numero} marquée livrée.`);
@@ -820,7 +859,9 @@ $barre-onglets: 64px;
 .adresse { margin-top: 14px; p { margin-bottom: 8px !important; color: var(--sanaa-text-muted); font-size: 0.92rem; } }
 .produits { margin: 0; padding-left: 18px; line-height: 1.55; }
 
-.ligne { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 0.95rem; &--vert { color: var(--sanaa-success, #4caf50); } }
+.ligne { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 0.95rem; &--vert { color: var(--sanaa-success, #4caf50); } &--gras { font-weight: 700; border-top: 1px solid var(--sanaa-border); margin-top: 4px; padding-top: 8px; } &--rouge { color: var(--sanaa-danger, #c0392b); } }
+.note--ko { color: var(--sanaa-danger, #c0392b); font-weight: 600; }
+.recap-caisse { margin-top: 18px; padding: 12px 14px; border-radius: 14px; background: var(--sanaa-bg); }
 .reste {
   margin-top: 10px;
   padding: 14px;

@@ -90,7 +90,7 @@
               </li>
             </ul>
             <p v-if="l.livree" class="sanaa-text-muted livraison__recap">
-              {{ Number(l.montant_recu) | montant }} encaissé{{ Number(l.frais_livraison) > 0 ? ` + ${formaterMontant(l.frais_livraison)} de frais` : '' }}
+              Client : {{ Number(l.total_recu_client) | montant }} — frais livreur : {{ Number(l.frais_livraison) | montant }} — remis à SANAA : {{ Number(l.montant_recu) | montant }}<template v-if="Number(l.surcout_livraison) > 0"> (surcoût livraison pris en charge : {{ Number(l.surcout_livraison) | montant }})</template>
               <template v-if="l.livree_par"> — par {{ l.livree_par }}</template>
               <template v-if="l.livree_le"> le {{ l.livree_le | dateHeureFr }}</template>
             </p>

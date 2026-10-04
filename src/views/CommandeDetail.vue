@@ -62,6 +62,9 @@
             Total {{ commande.total | montant }}
             <template v-if="commande.reduction > 0"> — Réduction -{{ commande.reduction | montant }}</template>
           </span>
+          <span v-if="Number(commande.ajustement_livraison) > 0" class="sanaa-kpi-sub kpi-frais-regles">
+            Surcoût de livraison pris en charge par SANAA : {{ commande.ajustement_livraison | montant }}
+          </span>
           <span v-if="Number(commande.surplus_regle) > 0" class="sanaa-kpi-sub kpi-frais-regles">
             Frais de livraison déjà réglés d'avance : {{ commande.surplus_regle | montant }}
           </span>
