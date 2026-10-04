@@ -41,13 +41,23 @@ export function numeroInternational(telephone, indicatif) {
  * symbole de la devise (ex. "F CFA") et `options.jourLivraison` le jour prévu
  * au calendrier, s'il existe.
  */
-export function messageCommande(commande, { lien, devise = '', jourLivraison = '' } = {}) {
+export function messageCommande(commande, { lien, devise = '', jourLivraison = '', fraisLivraison = 0 } = {}) {
   const client = commande.client_id || {};
   const prenom = client.nom ? String(client.nom).trim().split(/\s+/)[0] : '';
   const salut = prenom ? `Bonjour ${prenom},` : 'Bonjour,';
   const reste = Number(commande.reste_a_payer) || 0;
-  const montantReste = formaterMontant(reste, devise);
-  const rappelSolde = reste > 0 ? ` Le solde restant à régler est de ${montantReste}.` : '';
+  const frais = Number(fraisLivraison) || 0;
+  // Les frais de livraison du pays ne sont pas inclus dans le solde de la
+  // commande : on les ajoute explicitement pour que le client sache le total à
+  // prévoir le jour de la livraison.
+  let rappelSolde = '';
+  if (reste > 0 && frais > 0) {
+    rappelSolde = ` Le solde restant à régler est de ${formaterMontant(reste, devise)}, auquel s'ajoutent ${formaterMontant(frais, devise)} de frais de livraison, soit ${formaterMontant(reste + frais, devise)} au total à prévoir à la livraison.`;
+  } else if (reste > 0) {
+    rappelSolde = ` Le solde restant à régler est de ${formaterMontant(reste, devise)}.`;
+  } else if (frais > 0) {
+    rappelSolde = ` Votre commande est entièrement réglée, il ne restera que les frais de livraison de ${formaterMontant(frais, devise)} à régler à la livraison.`;
+  }
   const numero = commande.numero;
 
   let corps;
@@ -84,6 +94,7 @@ export function lienWhatsApp(commande, pays, options = {}) {
   const numero = numeroInternational(client.telephone_whatsapp, indicatifDuPays(pays));
   if (!numero) return null;
   const devise = options.devise || (pays && pays.devise_locale_id ? pays.devise_locale_id.symbole || pays.devise_locale_id.code : '');
-  const texte = messageCommande(commande, { lien: lienSuivi(commande.numero), devise, jourLivraison: options.jourLivraison });
+  const fraisLivraison = pays && pays.frais_livraison ? pays.frais_livraison : 0;
+  const texte = messageCommande(commande, { lien: lienSuivi(commande.numero), devise, jourLivraison: options.jourLivraison, fraisLivraison });
   return `https://wa.me/${numero}?text=${encodeURIComponent(texte)}`;
 }

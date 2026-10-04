@@ -122,13 +122,24 @@
             <span>{{ fmt(0) }}</span>
           </div>
 
-          <div class="suivi__reste" :class="{ 'is-regle': resultat.finances.reste_a_payer === 0 }">
-            <template v-if="resultat.finances.reste_a_payer === 0">
+          <template v-if="resultat.finances.frais_livraison > 0">
+            <div class="suivi__paiement-ligne suivi__paiement-ligne--gras">
+              <span>Reste à payer sur la commande</span>
+              <span>{{ fmt(resultat.finances.reste_a_payer) }}</span>
+            </div>
+            <div class="suivi__paiement-ligne">
+              <span>Frais de livraison <small>à régler à la livraison, en plus du solde</small></span>
+              <span>+ {{ fmt(resultat.finances.frais_livraison) }}</span>
+            </div>
+          </template>
+
+          <div class="suivi__reste" :class="{ 'is-regle': montantAPrevoir === 0 }">
+            <template v-if="montantAPrevoir === 0">
               <i class="el-icon-circle-check" /> Commande entièrement réglée
             </template>
             <template v-else>
-              <span class="suivi__reste-label">{{ livree ? 'Reste à payer' : 'Reste à payer à la livraison' }}</span>
-              <strong class="suivi__reste-montant">{{ fmt(resultat.finances.reste_a_payer) }}</strong>
+              <span class="suivi__reste-label">{{ resultat.finances.frais_livraison > 0 ? 'Total à prévoir à la livraison' : livree ? 'Reste à payer' : 'Reste à payer à la livraison' }}</span>
+              <strong class="suivi__reste-montant">{{ fmt(montantAPrevoir) }}</strong>
             </template>
           </div>
         </div>
@@ -168,6 +179,13 @@ export default {
     },
     livree() {
       return !!(this.etapeLivraison && this.etapeLivraison.atteinte);
+    },
+    // Ce que le client doit sortir le jour de la livraison : solde + frais de
+    // livraison du pays (qui ne sont pas inclus dans le solde de la commande).
+    montantAPrevoir() {
+      const f = this.resultat && this.resultat.finances;
+      if (!f) return 0;
+      return f.frais_livraison > 0 ? f.a_prevoir_livraison : f.reste_a_payer;
     },
     dateEtaAffichee() {
       if (!this.etapeLivraison) return '';
