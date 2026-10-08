@@ -87,6 +87,7 @@ export default {
       sidebarOuvertMobile: false,
       itemsMenu: [
         { name: 'dashboard', label: 'Dashboard', icone: 'el-icon-data-line', permission: 'dashboard:voir_pays' },
+        { name: 'a-traiter', label: 'À traiter aujourd\'hui', icone: 'el-icon-s-flag', permission: 'commandes:voir' },
         { name: 'commandes', label: 'Commandes', icone: 'el-icon-shopping-bag-1', permission: 'commandes:voir' },
         { name: 'livraisons', label: 'Livraisons', icone: 'el-icon-truck', permission: 'livraisons:voir' },
         { name: 'encaissements', label: 'Encaissements du jour', icone: 'el-icon-wallet', permission: 'paiements:voir' },

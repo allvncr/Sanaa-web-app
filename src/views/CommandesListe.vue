@@ -21,9 +21,6 @@
       <el-select v-model="filtres.creePar" placeholder="Saisi par" clearable filterable size="small" style="width: 190px" @change="chargerDepuisFiltre">
         <el-option v-for="u in createurs" :key="u._id" :value="u._id" :label="`${u.nom} (${u.total})`" />
       </el-select>
-      <el-select v-model="filtres.statut" placeholder="Statut commande" clearable size="small" style="width: 190px" @change="chargerDepuisFiltre">
-        <el-option v-for="(libelle, val) in statutsCommande" :key="val" :value="val" :label="avecCompteur(libelle, 'commande', val)" />
-      </el-select>
       <el-select v-model="filtres.fabrication" placeholder="Fabrication" clearable size="small" style="width: 190px" @change="chargerDepuisFiltre">
         <el-option v-for="(libelle, val) in statutsFabrication" :key="val" :value="val" :label="avecCompteur(libelle, 'fabrication', val)" />
       </el-select>
@@ -129,7 +126,7 @@ export default {
     return {
       chargement: false,
       commandes: [],
-      filtres: { q: '', creePar: '', statut: '', fabrication: '', livraison: '', plage: [] },
+      filtres: { q: '', creePar: '', fabrication: '', livraison: '', plage: [] },
       compteurs: { commande: {}, fabrication: {}, livraison: {} },
       pagination: { page: 1, limite: 20, total: 0 },
       createurs: [],
@@ -170,7 +167,6 @@ export default {
       this.filtres = {
         q: q.q || '',
         creePar: q.cree_par || '',
-        statut: q.statut || '',
         fabrication: q.fabrication || '',
         livraison: q.livraison || '',
         plage: q.date_de && q.date_a ? [q.date_de, q.date_a] : [],
@@ -186,7 +182,6 @@ export default {
       const query = {};
       if (this.filtres.q) query.q = this.filtres.q;
       if (this.filtres.creePar) query.cree_par = this.filtres.creePar;
-      if (this.filtres.statut) query.statut = this.filtres.statut;
       if (this.filtres.fabrication) query.fabrication = this.filtres.fabrication;
       if (this.filtres.livraison) query.livraison = this.filtres.livraison;
       if (date_de) query.date_de = date_de;
@@ -250,7 +245,6 @@ export default {
         pays_id: this.paysActifId || undefined,
         q: this.filtres.q ? this.filtres.q.trim() : undefined,
         cree_par: this.filtres.creePar || undefined,
-        statut: this.filtres.statut || undefined,
         statut_fabrication: this.filtres.fabrication || undefined,
         statut_livraison: this.filtres.livraison || undefined,
         date_de,
