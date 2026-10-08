@@ -16,9 +16,7 @@ function accueilSelonRole() {
   if (store.getters['auth/aPermission']('dashboard:voir_pays') || store.getters['auth/aPermission']('dashboard:voir_global')) {
     return { name: 'dashboard' };
   }
-  // Rôles sans dashboard (Gestionnaire...) : leur tableau de bord, c'est la
-  // liste de ce qu'il y a à traiter aujourd'hui.
-  return store.getters['auth/aPermission']('commandes:voir') ? { name: 'a-traiter' } : { name: 'commandes' };
+  return { name: 'commandes' };
 }
 
 const routes = [
@@ -54,7 +52,7 @@ const routes = [
         path: 'a-traiter',
         name: 'a-traiter',
         component: () => import('@/views/ATraiter.vue'),
-        meta: { permission: 'commandes:voir' },
+        meta: { permission: 'a_traiter:voir' },
       },
       {
         path: 'commandes',
