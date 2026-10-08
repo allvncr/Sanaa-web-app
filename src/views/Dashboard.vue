@@ -41,7 +41,7 @@
             <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.ca_converti | montant }}</span>
           </div>
           <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">Encaissements consolidés</span>
+            <span class="sanaa-kpi-label">Montant perçu consolidé</span>
             <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.encaissements_convertis | montant }}</span>
           </div>
           <div class="sanaa-kpi">
@@ -102,22 +102,25 @@
       <template v-else-if="kpisData">
         <div class="sanaa-grid sanaa-grid--kpis">
           <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">CA généré</span>
+            <span class="sanaa-kpi-label">CA (toutes les commandes)</span>
             <span class="sanaa-kpi-value">{{ kpisData.ca.montant | montant(deviseSymbole) }}</span>
+            <span class="sanaa-kpi-sub">commandes passées sur la période, nettes de réduction</span>
             <span v-if="delta('ca')" class="sanaa-kpi-delta" :class="classeDelta('ca')">{{ delta('ca') }} {{ libelleComparaison }}</span>
           </div>
           <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">Encaissements</span>
+            <span class="sanaa-kpi-label">Montant perçu</span>
+            <span class="sanaa-kpi-sub">avances + paiements à la livraison</span>
             <span class="sanaa-kpi-value">{{ kpisData.encaissements.montant | montant(deviseSymbole) }}</span>
             <span v-if="delta('encaissements')" class="sanaa-kpi-delta" :class="classeDelta('encaissements')">{{ delta('encaissements') }} {{ libelleComparaison }}</span>
           </div>
           <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">Reste à recevoir</span>
+            <span class="sanaa-kpi-label">Reste à percevoir</span>
             <span class="sanaa-kpi-value">{{ kpisData.reste_a_recevoir.montant | montant(deviseSymbole) }}</span>
           </div>
           <div class="sanaa-kpi">
             <span class="sanaa-kpi-label">Dépenses</span>
             <span class="sanaa-kpi-value">{{ kpisData.depenses.montant | montant(deviseSymbole) }}</span>
+            <span v-if="Number(kpisData.surcouts_livraison) !== 0" class="sanaa-kpi-sub">dont {{ kpisData.surcouts_livraison | montant(deviseSymbole) }} de surcoût de livraison</span>
             <span v-if="delta('depenses')" class="sanaa-kpi-delta" :class="classeDelta('depenses', true)">{{ delta('depenses') }} {{ libelleComparaison }}</span>
           </div>
           <div class="sanaa-kpi">
@@ -182,13 +185,15 @@
             <p v-else class="sanaa-empty">Aucune vente sur la période.</p>
           </div>
           <div class="sanaa-card">
-            <h3>Alertes actives</h3>
-            <ul class="sanaa-alertes" v-if="alertes.length">
-              <li v-for="a in alertes" :key="a._id">
-                <i class="el-icon-warning" /> {{ a.message || a.type }}
-              </li>
-            </ul>
-            <p v-else class="sanaa-empty">Aucune alerte active.</p>
+            <h3>Répartition des dépenses</h3>
+            <apexchart
+              v-if="repartitionDepenses.length"
+              type="donut"
+              height="280"
+              :options="optionsRepartitionDepenses"
+              :series="serieRepartitionDepenses"
+            />
+            <p v-else class="sanaa-empty">Aucune dépense sur la période.</p>
           </div>
         </div>
 
@@ -279,7 +284,7 @@ export default {
       repartitionCanal: [],
       nouveauxClients: { total: 0, comparaison: null, points: [] },
       analyseCaPubDepenses: videEvolution(),
-      alertes: [],
+      repartitionDepenses: [],
     };
   },
   computed: {
@@ -341,6 +346,17 @@ export default {
         // décalaient dès qu'un statut était absent pour le pays choisi.
         colors: this.repartitionLivraison.map((r) => COULEURS_STATUT_LIVRAISON[r.statut] || '#9B9B9B'),
         legend: { position: 'bottom' },
+      };
+    },
+    serieRepartitionDepenses() {
+      return this.repartitionDepenses.map((r) => r.montant);
+    },
+    optionsRepartitionDepenses() {
+      return {
+        labels: this.repartitionDepenses.map((r) => r.type),
+        colors: ['#B8885E', '#CEA77B', '#4C8064', '#8a7256', '#B4483B', '#D9C7A8', '#5B7F95', '#9B9B9B'],
+        legend: { position: 'bottom' },
+        tooltip: { y: { formatter: (v) => formaterMontant(v, this.deviseSymbole) } },
       };
     },
     serieRepartitionCanal() {
@@ -438,10 +454,10 @@ export default {
       try {
         if (this.estVueGlobale) {
           const communParams = { devise_affichage: this.deviseAffichage, ...params };
-          const [comparaisonRes, perfRes, alertesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes] = await Promise.all([
+          const [comparaisonRes, perfRes, depensesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes] = await Promise.all([
             dashboardApi.comparaisonPays(communParams),
             dashboardApi.performanceProduits(communParams),
-            dashboardApi.alertes({ statut: 'nouvelle' }),
+            dashboardApi.repartitionDepenses(communParams),
             dashboardApi.evolutionCA(communParams),
             dashboardApi.repartitionLivraison(params),
             dashboardApi.repartitionCanal(params),
@@ -450,7 +466,7 @@ export default {
           ]);
           this.comparaison = comparaisonRes.data.data;
           this.performanceProduits = perfRes.data.data;
-          this.alertes = alertesRes.data.data;
+          this.repartitionDepenses = depensesRes.data.data;
           this.evolutionCA = evolutionRes.data.data;
           this.repartitionLivraison = repartitionRes.data.data;
           this.repartitionCanal = canalRes.data.data;
@@ -458,10 +474,10 @@ export default {
           this.analyseCaPubDepenses = analyseRes.data.data;
         } else {
           const communParams = { pays_id: this.paysActifId, ...params };
-          const [kpisRes, perfRes, alertesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes] = await Promise.all([
+          const [kpisRes, perfRes, depensesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes] = await Promise.all([
             dashboardApi.kpis(communParams),
             dashboardApi.performanceProduits(communParams),
-            dashboardApi.alertes({ pays_id: this.paysActifId, statut: 'nouvelle' }),
+            dashboardApi.repartitionDepenses(communParams),
             dashboardApi.evolutionCA(communParams),
             dashboardApi.repartitionLivraison(communParams),
             dashboardApi.repartitionCanal(communParams),
@@ -470,7 +486,7 @@ export default {
           ]);
           this.kpisData = kpisRes.data.data;
           this.performanceProduits = perfRes.data.data;
-          this.alertes = alertesRes.data.data;
+          this.repartitionDepenses = depensesRes.data.data;
           this.evolutionCA = evolutionRes.data.data;
           this.repartitionLivraison = repartitionRes.data.data;
           this.repartitionCanal = canalRes.data.data;

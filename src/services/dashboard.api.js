@@ -25,6 +25,9 @@ export default {
   analyseCaPubDepenses(params) {
     return api.get('/dashboard/analyse-ca-pub-depenses', { params });
   },
+  repartitionDepenses(params) {
+    return api.get('/dashboard/repartition-depenses', { params });
+  },
   alertes(params) {
     return api.get('/alertes', { params });
   },
