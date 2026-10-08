@@ -241,6 +241,15 @@ import dashboardApi from '@/services/dashboard.api';
 import referentielsApi from '@/services/referentiels.api';
 import { formaterMontant } from '@/utils/format';
 
+// Couleurs fixes du graphique « Répartition des livraisons » (retour du 08/10/2026).
+const COULEURS_STATUT_LIVRAISON = {
+  Livree: '#4C8064', // vert
+  En_livraison: '#E3B83C', // jaune
+  Recue_en_pays: '#D9C7A8', // beige
+  A_expedier: '#9B9B9B', // gris
+  Retour_echec: '#B4483B', // rouge
+};
+
 const LIBELLES_COMPARAISON = {
   jour: 'vs veille',
   semaine: 'vs semaine précédente',
@@ -328,7 +337,9 @@ export default {
       const libelles = this.$i18n.messages.fr.statuts.livraison;
       return {
         labels: this.repartitionLivraison.map((r) => libelles[r.statut] || r.statut),
-        colors: ['#8a7256', '#CEA77B', '#B8885E', '#4C8064', '#B4483B'],
+        // Une couleur par statut, fixe : attribuées par position elles se
+        // décalaient dès qu'un statut était absent pour le pays choisi.
+        colors: this.repartitionLivraison.map((r) => COULEURS_STATUT_LIVRAISON[r.statut] || '#9B9B9B'),
         legend: { position: 'bottom' },
       };
     },
