@@ -102,20 +102,18 @@
       <template v-else-if="kpisData">
         <div class="sanaa-grid sanaa-grid--kpis">
           <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">CA des colis livrés</span>
+            <span class="sanaa-kpi-label">CA généré</span>
             <span class="sanaa-kpi-value">{{ kpisData.ca.montant | montant(deviseSymbole) }}</span>
-            <span class="sanaa-kpi-sub">livrés sur la période choisie</span>
             <span v-if="delta('ca')" class="sanaa-kpi-delta" :class="classeDelta('ca')">{{ delta('ca') }} {{ libelleComparaison }}</span>
           </div>
           <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">Encaissé sur ces colis</span>
+            <span class="sanaa-kpi-label">Encaissements</span>
             <span class="sanaa-kpi-value">{{ kpisData.encaissements.montant | montant(deviseSymbole) }}</span>
             <span v-if="delta('encaissements')" class="sanaa-kpi-delta" :class="classeDelta('encaissements')">{{ delta('encaissements') }} {{ libelleComparaison }}</span>
           </div>
           <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">Reste à recevoir sur ces colis</span>
+            <span class="sanaa-kpi-label">Reste à recevoir</span>
             <span class="sanaa-kpi-value">{{ kpisData.reste_a_recevoir.montant | montant(deviseSymbole) }}</span>
-            <span class="sanaa-kpi-sub">CA = encaissé + reste</span>
           </div>
           <div class="sanaa-kpi">
             <span class="sanaa-kpi-label">Dépenses</span>
@@ -130,12 +128,11 @@
           <div class="sanaa-kpi">
             <span class="sanaa-kpi-label">Panier moyen</span>
             <span class="sanaa-kpi-value">{{ panierMoyen | montant(deviseSymbole) }}</span>
-            <span class="sanaa-kpi-sub">{{ kpisData.nombre_colis_livres }} colis livré{{ kpisData.nombre_colis_livres > 1 ? 's' : '' }}</span>
+            <span class="sanaa-kpi-sub">{{ kpisData.nombre_commandes }} commande{{ kpisData.nombre_commandes > 1 ? 's' : '' }}</span>
           </div>
           <div class="sanaa-kpi">
             <span class="sanaa-kpi-label">Taux de livraison</span>
             <span class="sanaa-kpi-value">{{ kpisData.taux_livraison_pct }} %</span>
-            <span class="sanaa-kpi-sub">{{ kpisData.nombre_commandes_livrees }} livrées sur {{ kpisData.nombre_commandes }} commandes passées sur la période</span>
             <span class="sanaa-kpi-sub">Annulation {{ kpisData.taux_annulation_pct }} % — Retour {{ kpisData.taux_retour_pct }} %</span>
           </div>
           <div class="sanaa-kpi">
@@ -295,8 +292,8 @@ export default {
       return LIBELLES_COMPARAISON[this.periode] || '';
     },
     panierMoyen() {
-      if (!this.kpisData || !this.kpisData.nombre_colis_livres) return 0;
-      return Number(this.kpisData.ca.montant) / this.kpisData.nombre_colis_livres;
+      if (!this.kpisData || !this.kpisData.nombre_commandes) return 0;
+      return Number(this.kpisData.ca.montant) / this.kpisData.nombre_commandes;
     },
     deltaClients() {
       const { total, comparaison } = this.nouveauxClients;
