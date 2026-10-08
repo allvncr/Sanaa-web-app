@@ -21,8 +21,14 @@
       <el-select v-model="filtres.creePar" placeholder="Saisi par" clearable filterable size="small" style="width: 190px" @change="chargerDepuisFiltre">
         <el-option v-for="u in createurs" :key="u._id" :value="u._id" :label="`${u.nom} (${u.total})`" />
       </el-select>
-      <el-select v-model="filtres.statut" placeholder="Statut" clearable size="small" style="width: 160px" @change="chargerDepuisFiltre">
-        <el-option v-for="(libelle, val) in statutsCommande" :key="val" :value="val" :label="libelle" />
+      <el-select v-model="filtres.statut" placeholder="Statut commande" clearable size="small" style="width: 190px" @change="chargerDepuisFiltre">
+        <el-option v-for="(libelle, val) in statutsCommande" :key="val" :value="val" :label="avecCompteur(libelle, 'commande', val)" />
+      </el-select>
+      <el-select v-model="filtres.fabrication" placeholder="Fabrication" clearable size="small" style="width: 190px" @change="chargerDepuisFiltre">
+        <el-option v-for="(libelle, val) in statutsFabrication" :key="val" :value="val" :label="avecCompteur(libelle, 'fabrication', val)" />
+      </el-select>
+      <el-select v-model="filtres.livraison" placeholder="Livraison" clearable size="small" style="width: 190px" @change="chargerDepuisFiltre">
+        <el-option v-for="(libelle, val) in statutsLivraison" :key="val" :value="val" :label="avecCompteur(libelle, 'livraison', val)" />
       </el-select>
       <el-date-picker
         v-model="filtres.plage"
@@ -123,7 +129,8 @@ export default {
     return {
       chargement: false,
       commandes: [],
-      filtres: { q: '', creePar: '', statut: '', plage: [] },
+      filtres: { q: '', creePar: '', statut: '', fabrication: '', livraison: '', plage: [] },
+      compteurs: { commande: {}, fabrication: {}, livraison: {} },
       pagination: { page: 1, limite: 20, total: 0 },
       createurs: [],
       minuterie: null,
@@ -164,6 +171,8 @@ export default {
         q: q.q || '',
         creePar: q.cree_par || '',
         statut: q.statut || '',
+        fabrication: q.fabrication || '',
+        livraison: q.livraison || '',
         plage: q.date_de && q.date_a ? [q.date_de, q.date_a] : [],
       };
       this.pagination.page = Number(q.page) || 1;
@@ -178,6 +187,8 @@ export default {
       if (this.filtres.q) query.q = this.filtres.q;
       if (this.filtres.creePar) query.cree_par = this.filtres.creePar;
       if (this.filtres.statut) query.statut = this.filtres.statut;
+      if (this.filtres.fabrication) query.fabrication = this.filtres.fabrication;
+      if (this.filtres.livraison) query.livraison = this.filtres.livraison;
       if (date_de) query.date_de = date_de;
       if (date_a) query.date_a = date_a;
       if (this.pagination.page > 1) query.page = String(this.pagination.page);
@@ -215,23 +226,39 @@ export default {
       this.viderSelection();
       this.charger();
     },
+    // Effectifs réels par statut, selon les autres filtres actifs, affichés
+    // dans les listes déroulantes ("En livraison (12)").
+    async chargerCompteurs(criteres) {
+      try {
+        const { data } = await commandesApi.compteursStatuts(criteres);
+        this.compteurs = data.data;
+      } catch (e) {
+        this.compteurs = { commande: {}, fabrication: {}, livraison: {} };
+      }
+    },
+    avecCompteur(libelle, famille, valeur) {
+      const n = this.compteurs[famille] ? this.compteurs[famille][valeur] : 0;
+      return `${libelle} (${n || 0})`;
+    },
     async charger() {
       clearTimeout(this.minuterie);
       this.synchroniserRoute();
       const numeroRequete = ++this.requete;
       this.chargement = true;
       const [date_de, date_a] = this.filtres.plage && this.filtres.plage.length ? this.filtres.plage : [undefined, undefined];
+      const criteres = {
+        pays_id: this.paysActifId || undefined,
+        q: this.filtres.q ? this.filtres.q.trim() : undefined,
+        cree_par: this.filtres.creePar || undefined,
+        statut: this.filtres.statut || undefined,
+        statut_fabrication: this.filtres.fabrication || undefined,
+        statut_livraison: this.filtres.livraison || undefined,
+        date_de,
+        date_a,
+      };
+      this.chargerCompteurs(criteres);
       try {
-        const { data } = await commandesApi.lister({
-          pays_id: this.paysActifId || undefined,
-          q: this.filtres.q ? this.filtres.q.trim() : undefined,
-          cree_par: this.filtres.creePar || undefined,
-          statut: this.filtres.statut || undefined,
-          date_de,
-          date_a,
-          page: this.pagination.page,
-          limite: this.pagination.limite,
-        });
+        const { data } = await commandesApi.lister({ ...criteres, page: this.pagination.page, limite: this.pagination.limite });
         // Réponse périmée (une frappe plus récente a relancé la recherche) : ignorée.
         if (numeroRequete === this.requete) {
           this.commandes = data.data;

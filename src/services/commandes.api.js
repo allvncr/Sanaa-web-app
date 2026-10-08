@@ -7,6 +7,9 @@ export default {
   createurs(params) {
     return api.get('/commandes/createurs', { params });
   },
+  compteursStatuts(params) {
+    return api.get('/commandes/statuts-compteurs', { params });
+  },
   obtenir(id) {
     return api.get(`/commandes/${id}`);
   },
