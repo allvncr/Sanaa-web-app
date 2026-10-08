@@ -42,12 +42,23 @@
           </div>
           <div>
             <strong>{{ montantLivreAujourdhui | montant }}</strong>
-            <span>à remettre</span>
+            <span>à reverser aujourd'hui</span>
           </div>
         </div>
         <div v-if="progressionTotal > 0" class="hero__progression">
           <div class="hero__barre"><div class="hero__barre-remplie" :style="{ width: progression + '%' }" /></div>
           <span>{{ progressionFaits }}/{{ progressionTotal }} livrés {{ jourFiltre && jourFiltre !== aujourdhui ? 'ce jour-là' : "aujourd'hui" }}</span>
+        </div>
+      </section>
+
+      <section v-if="caisse.n > 0" class="caisse">
+        <p class="caisse__label">Caisse {{ libelleCaisse }}</p>
+        <p class="caisse__montant">{{ caisse.remis | montant }}</p>
+        <p class="caisse__sous">à reverser à SANAA</p>
+        <div class="caisse__lignes">
+          <div><span>{{ caisse.n }} colis livré{{ caisse.n > 1 ? 's' : '' }}</span></div>
+          <div><span>Reçu des clients</span><span>{{ caisse.total | montant }}</span></div>
+          <div><span>Frais que vous gardez</span><span>− {{ caisse.frais | montant }}</span></div>
         </div>
       </section>
 
@@ -368,14 +379,25 @@ export default {
     totalAPercevoir() {
       return this.restantesFiltrees.reduce((s, l) => s + (l.commande ? Number(l.commande.reste_a_payer) || 0 : 0), 0);
     },
+    // La caisse se compte au jour où l'argent a été encaissé (date de la
+    // confirmation), pas au jour prévu au calendrier : un colis prévu hier mais
+    // livré aujourd'hui est bien dans la caisse d'aujourd'hui.
     livreesAujourdhui() {
-      return this.toutes.filter((l) => this.estLivree(l) && l.jour === this.aujourdhui);
+      return this.livreesDuJour(this.aujourdhui);
     },
     montantLivreAujourdhui() {
       return this.livreesAujourdhui.reduce((s, l) => s + Number(l.montant_recu || 0), 0);
     },
     jourReference() {
       return this.jourFiltre || this.aujourdhui;
+    },
+    caisse() {
+      const livrees = this.livreesDuJour(this.jourReference);
+      const somme = (champ) => livrees.reduce((s, l) => s + (Number(l[champ]) || 0), 0);
+      return { n: livrees.length, total: somme('total_recu_client'), frais: somme('frais_livraison'), remis: somme('montant_recu') };
+    },
+    libelleCaisse() {
+      return this.jourReference === this.aujourdhui ? "d'aujourd'hui" : `du ${this.formaterJourCourt(this.jourReference)}`;
     },
     progressionTotal() {
       return this.toutes.filter((l) => l.commande && l.jour === this.jourReference).length;
@@ -461,6 +483,14 @@ export default {
     formaterMontant,
     estLivree(l) {
       return !!(l.commande && l.commande.statut_livraison === 'Livree');
+    },
+    // Jour (calendaire local) où la livraison a été confirmée ; à défaut de
+    // date (livraison validée par un autre chemin), le jour prévu.
+    jourEncaissement(l) {
+      return l.livree_le ? cleJour(new Date(l.livree_le)) : l.jour;
+    },
+    livreesDuJour(jour) {
+      return this.toutes.filter((l) => this.estLivree(l) && this.jourEncaissement(l) === jour);
     },
     classeCarte(l) {
       if (this.estLivree(l)) return 'is-livree';
@@ -860,6 +890,24 @@ $barre-onglets: 64px;
 .produits { margin: 0; padding-left: 18px; line-height: 1.55; }
 
 .ligne { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 0.95rem; &--vert { color: var(--sanaa-success, #4caf50); } &--gras { font-weight: 700; border-top: 1px solid var(--sanaa-border); margin-top: 4px; padding-top: 8px; } &--rouge { color: var(--sanaa-danger, #c0392b); } }
+.caisse {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--sanaa-surface);
+  border: 2px solid var(--sanaa-success, #4caf50);
+  p { margin: 0; }
+}
+.caisse__label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sanaa-text-muted); }
+.caisse__montant { font-size: 2rem; font-weight: 700; line-height: 1.15; color: var(--sanaa-success, #4caf50); margin-top: 2px !important; }
+.caisse__sous { font-size: 0.85rem; color: var(--sanaa-text-muted); }
+.caisse__lignes {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--sanaa-border);
+  font-size: 0.88rem;
+  div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+}
 .note--ko { color: var(--sanaa-danger, #c0392b); font-weight: 600; }
 .recap-caisse { margin-top: 18px; padding: 12px 14px; border-radius: 14px; background: var(--sanaa-bg); }
 .reste {
