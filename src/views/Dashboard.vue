@@ -246,6 +246,32 @@ import dashboardApi from '@/services/dashboard.api';
 import referentielsApi from '@/services/referentiels.api';
 import { formaterMontant } from '@/utils/format';
 
+// Couleurs fixes du graphique « Répartition des dépenses » (retour du 09/10/2026).
+// Les types de dépense sont des catégories librement nommées : on les reconnaît
+// à un mot-clé (sans accent ni casse) pour que « Pub Facebook » ou « Publicité
+// facebook » aient la même couleur. Le plus spécifique d'abord (tiktok/facebook
+// avant tout mot plus général). Un type inconnu reçoit une couleur stable
+// tirée de son nom, jamais décalée selon les autres types présents.
+const COULEURS_DEPENSE = [
+  [/tiktok/, '#8E5BC4'], // violet
+  [/facebook|meta\b/, '#3B7DD8'], // bleu
+  [/surcout/, '#E8833A'], // orange
+  [/confection/, '#4C8064'], // vert
+  [/logistique/, '#E3B83C'], // jaune
+  [/salaire/, '#D9C7A8'], // beige
+  [/divers/, '#9B9B9B'], // gris
+];
+const COULEURS_DEPENSE_AUTRES = ['#2E9CA6', '#D66A8F', '#8a7256', '#2D4A7A', '#B4483B', '#7A9A3C'];
+
+function couleurDepense(type) {
+  const nom = String(type || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const trouvee = COULEURS_DEPENSE.find(([motif]) => motif.test(nom));
+  if (trouvee) return trouvee[1];
+  let hash = 0;
+  for (let i = 0; i < nom.length; i += 1) hash = (hash * 31 + nom.charCodeAt(i)) % 997;
+  return COULEURS_DEPENSE_AUTRES[hash % COULEURS_DEPENSE_AUTRES.length];
+}
+
 // Couleurs fixes du graphique « Répartition des livraisons » (retour du 08/10/2026).
 const COULEURS_STATUT_LIVRAISON = {
   Livree: '#4C8064', // vert
@@ -354,7 +380,7 @@ export default {
     optionsRepartitionDepenses() {
       return {
         labels: this.repartitionDepenses.map((r) => r.type),
-        colors: ['#B8885E', '#CEA77B', '#4C8064', '#8a7256', '#B4483B', '#D9C7A8', '#5B7F95', '#9B9B9B'],
+        colors: this.repartitionDepenses.map((r) => couleurDepense(r.type)),
         legend: { position: 'bottom' },
         tooltip: { y: { formatter: (v) => formaterMontant(v, this.deviseSymbole) } },
       };
