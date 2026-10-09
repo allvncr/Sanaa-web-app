@@ -40,52 +40,92 @@ export function numeroInternational(telephone, indicatif) {
  * `commande` vient de l'API (client_id peuplé) ; `options.devise` est le
  * symbole de la devise (ex. "F CFA") et `options.jourLivraison` le jour prévu
  * au calendrier, s'il existe.
+ *
+ * Ton et mise en forme repris des messages que l'équipe envoyait déjà à la main
+ * (retour du 09/10/2026) : vouvoiement chaleureux, emojis, court, avec le lien
+ * de suivi et le numéro de commande en dernière ligne.
  */
 export function messageCommande(commande, { lien, devise = '', jourLivraison = '', fraisLivraison = 0 } = {}) {
   const client = commande.client_id || {};
   const prenom = client.nom ? String(client.nom).trim().split(/\s+/)[0] : '';
-  const salut = prenom ? `Bonjour ${prenom},` : 'Bonjour,';
+  const salut = prenom ? `Bonjour ${prenom} 😊` : 'Bonjour 😊';
+  const numero = commande.numero;
   const reste = Number(commande.reste_a_payer) || 0;
   // Le surplus déjà versé par le client compte comme frais de livraison réglés.
-  const frais = Math.max(0, (Number(fraisLivraison) || 0) - (Number(commande.surplus_regle) || 0));
-  const fraisDejaRegles = Number(commande.surplus_regle) > 0;
-  // Les frais de livraison du pays ne sont pas inclus dans le solde de la
-  // commande : on les ajoute explicitement pour que le client sache le total à
-  // prévoir le jour de la livraison.
-  let rappelSolde = '';
-  if (reste > 0 && frais > 0) {
-    rappelSolde = ` Le solde restant à régler est de ${formaterMontant(reste, devise)}, auquel s'ajoutent ${formaterMontant(frais, devise)} de frais de livraison, soit ${formaterMontant(reste + frais, devise)} au total à prévoir à la livraison.`;
-  } else if (reste > 0) {
-    rappelSolde = ` Le solde restant à régler est de ${formaterMontant(reste, devise)}.`;
-  } else if (frais > 0) {
-    rappelSolde = ` Votre commande est entièrement réglée, il ne restera que les frais de livraison de ${formaterMontant(frais, devise)} à régler à la livraison.`;
-  } else if (fraisDejaRegles) {
-    rappelSolde = ' Votre commande et vos frais de livraison sont entièrement réglés, il n\'y a rien à payer à la livraison.';
-  }
-  const numero = commande.numero;
+  const surplus = Number(commande.surplus_regle) || 0;
+  const frais = Math.max(0, (Number(fraisLivraison) || 0) - surplus);
+  const m = (v) => formaterMontant(v, devise);
 
-  let corps;
+  // Les frais de livraison ne sont pas inclus dans le solde de la commande : on
+  // annonce le total à prévoir le jour de la livraison.
+  let paiement = '';
+  if (reste > 0 && frais > 0) paiement = `💰 À prévoir à la livraison : ${m(reste)} de solde + ${m(frais)} de frais de livraison, soit ${m(reste + frais)}.`;
+  else if (reste > 0) paiement = `💰 Solde à régler à la livraison : ${m(reste)}.`;
+  else if (frais > 0) paiement = `✅ Votre commande est déjà réglée, il ne reste que les frais de livraison : ${m(frais)}.`;
+  else if (surplus > 0) paiement = '✅ Tout est déjà réglé, rien à payer à la livraison.';
+
+  const suivi = `Suivez votre commande ici 👉 ${lien}\n(votre numéro de téléphone vous sera demandé)`;
+  const pied = `Commande ${numero}`;
+  const assembler = (...blocs) => blocs.filter(Boolean).join('\n\n');
+
   if (commande.statut_commande === 'Annulee') {
-    return `${salut} votre commande ${numero} a été annulée. N'hésitez pas à nous écrire pour toute question.\n\nL'équipe SANAA`;
+    return assembler(`${salut}`, `Votre commande a été annulée. Pour toute question, n'hésitez pas à nous écrire 🙏`, pied);
   }
   switch (commande.statut_livraison) {
     case 'Livree':
-      return `${salut} votre commande ${numero} a bien été livrée. Merci pour votre confiance, nous espérons que votre bijou vous plaît !\n\nL'équipe SANAA`;
+      return assembler(
+        `${salut.replace(' 😊', '')} 🎉`,
+        'Votre bijou 💎 vous a bien été livré ! Merci pour votre confiance, nous espérons qu\'il vous plaît ❤️',
+        pied,
+      );
     case 'Retour_echec':
-      corps = `nous n'avons pas pu vous livrer la commande ${numero}. Pouvez-vous nous dire quand vous serez disponible pour une nouvelle livraison ?`;
-      break;
+      return assembler(
+        `${salut}`,
+        'Nous n\'avons malheureusement pas pu vous livrer votre bijou 💎 😕\nQuand serez-vous disponible pour une nouvelle livraison ? Répondez-nous ici, nous reprogrammons tout de suite 🚚',
+        suivi,
+        pied,
+      );
     case 'En_livraison':
-      corps = `votre commande ${numero} est en cours de livraison${jourLivraison ? ` (prévue le ${jourLivraison})` : ''}.${rappelSolde}`;
-      break;
+      return assembler(
+        `${salut}`,
+        `Votre bijou 💎 est en cours de livraison 🚚${jourLivraison ? ` (prévue le ${jourLivraison})` : ''}\nMerci de rester joignable 🙏`,
+        paiement,
+        suivi,
+        pied,
+      );
     case 'Recue_en_pays':
-      corps = `bonne nouvelle, votre commande ${numero} est arrivée dans votre pays ! Nous vous contactons très vite pour organiser la livraison.${rappelSolde}`;
-      break;
+      return assembler(
+        `${salut} bonne nouvelle !`,
+        'Votre bijou 💎 vient d\'arriver chez nous 🎉\nNous programmons votre livraison 🚚 et vous contactons très vite.',
+        paiement,
+        suivi,
+        pied,
+      );
     default:
-      if (commande.statut_fabrication === 'Terminee') corps = `votre bijou (commande ${numero}) est terminé et part bientôt vers votre pays.`;
-      else if (commande.statut_fabrication === 'En_fabrication') corps = `votre commande ${numero} est en cours de fabrication.`;
-      else corps = `nous avons bien confirmé votre commande ${numero}. Merci pour votre confiance !`;
+      break;
   }
-  return `${salut} ${corps}\n\nSuivez votre commande ici : ${lien}\n(Votre numéro de téléphone vous sera demandé.)\n\nL'équipe SANAA`;
+  if (commande.statut_fabrication === 'Terminee') {
+    return assembler(
+      `${salut} bonne nouvelle !`,
+      'Votre bijou personnalisé 💎 est terminé ✨\nIl est en route vers nous : réception sous 5 à 7 jours, puis nous programmons aussitôt votre livraison 🚚',
+      suivi,
+      `Merci pour votre confiance ❤️\n${pied}`,
+    );
+  }
+  if (commande.statut_fabrication === 'En_fabrication') {
+    return assembler(
+      `${salut}`,
+      'Votre bijou personnalisé 💎 est en cours de fabrication ✨\nNous vous prévenons dès qu\'il est prêt.',
+      suivi,
+      `Merci pour votre confiance ❤️\n${pied}`,
+    );
+  }
+  return assembler(
+    `${salut} merci pour votre commande ✅`,
+    'Elle est bien confirmée et part bientôt en fabrication 💎 (environ 7 jours).',
+    suivi,
+    `Merci pour votre confiance ❤️\n${pied}`,
+  );
 }
 
 export function lienSuivi(numero) {
