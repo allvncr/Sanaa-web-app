@@ -107,7 +107,7 @@ export function messageCommande(commande, { lien, devise = '', jourLivraison = '
   if (commande.statut_fabrication === 'Terminee') {
     return assembler(
       `${salut} bonne nouvelle !`,
-      'Votre bijou personnalisé 💎 est terminé ✨\nIl est en route vers nous : réception sous 5 à 7 jours, puis nous programmons aussitôt votre livraison 🚚',
+      'Votre bijou personnalisé 💎 est terminé ✨\nIl est en route vers nous : réception sous 5 jours, puis nous programmons aussitôt votre livraison 🚚',
       suivi,
       `Merci pour votre confiance ❤️\n${pied}`,
     );
