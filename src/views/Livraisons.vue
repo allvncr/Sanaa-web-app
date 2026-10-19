@@ -49,9 +49,21 @@
               {{ livraisonsDuJour.length === 0 ? 'Aucune livraison prévue' : `${livraisonsDuJour.length} livraison${livraisonsDuJour.length > 1 ? 's' : ''} prévue${livraisonsDuJour.length > 1 ? 's' : ''}` }}
             </span>
           </div>
-          <el-button v-can="'livraisons:planifier'" type="primary" size="small" icon="el-icon-plus" @click="ouvrirAjout">
-            Ajouter une livraison
-          </el-button>
+          <div class="jour__actions">
+            <el-button
+              size="small"
+              icon="el-icon-printer"
+              :loading="telechargementFiche"
+              :disabled="livraisonsDuJour.length === 0"
+              :title="paysActifId ? 'Télécharger la fiche de livraison du jour (PDF) à remettre au livreur' : 'Choisissez un pays pour télécharger la fiche'"
+              @click="telechargerFiche"
+            >
+              Fiche de livraison
+            </el-button>
+            <el-button v-can="'livraisons:planifier'" type="primary" size="small" icon="el-icon-plus" @click="ouvrirAjout">
+              Ajouter une livraison
+            </el-button>
+          </div>
         </div>
 
         <div v-if="resumeJour" class="resume-jour">
@@ -202,6 +214,7 @@ export default {
       statutsLivraison: this.$i18n.messages.fr.statuts.livraison,
       // dialogue d'ajout
       dialogueAjout: false,
+      telechargementFiche: false,
       recherche: '',
       resultats: [],
       rechercheEnCours: false,
@@ -342,6 +355,20 @@ export default {
     },
 
     // --- ajout d'une livraison
+    async telechargerFiche() {
+      if (!this.paysActifId) {
+        this.$store.dispatch('notifications/avertir', { message: 'Choisissez un pays (en haut) pour télécharger la fiche de livraison.', type: 'warning' });
+        return;
+      }
+      this.telechargementFiche = true;
+      try {
+        await livraisonsApi.telechargerFiche(this.jourSelectionne, this.paysActifId);
+      } catch (err) {
+        this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Impossible de générer la fiche de livraison.');
+      } finally {
+        this.telechargementFiche = false;
+      }
+    },
     ouvrirAjout() {
       this.dialogueAjout = true;
       this.rechercherCommandes();
@@ -496,6 +523,7 @@ export default {
   margin-bottom: 12px;
 }
 .jour__titre { margin: 0 0 2px; font-size: 1.05rem; }
+.jour__actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 
 .resume-jour {
   display: flex;
