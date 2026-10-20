@@ -168,7 +168,8 @@ export default {
     },
     telephoneModifie() {
       const actuel = (this.commande && this.commande.client_id && this.commande.client_id.telephone_whatsapp) || '';
-      return this.form && (this.form.client.telephone_whatsapp || '').trim() !== actuel;
+      const sansEspaces = (t) => String(t || '').replace(/[^\d+/,;]/g, '');
+      return this.form && sansEspaces(this.form.client.telephone_whatsapp) !== sansEspaces(actuel);
     },
     // Catalogue actif + produits déjà présents sur la commande (ex. produit désactivé depuis).
     optionsProduits() {
