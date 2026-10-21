@@ -122,7 +122,7 @@ export function messageCommande(commande, { lien, devise = '', jourLivraison = '
   }
   return assembler(
     `${salut} merci pour votre commande ✅`,
-    'Elle est bien confirmée et part bientôt en fabrication 💎 (environ 7 jours).',
+    'Elle est bien confirmée et part bientôt en fabrication 💎.',
     suivi,
     `Merci pour votre confiance ❤️\n${pied}`,
   );
