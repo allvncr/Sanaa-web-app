@@ -210,13 +210,13 @@
             <p v-else class="sanaa-empty">Aucune commande sur la période.</p>
           </div>
           <div class="sanaa-card">
-            <h3>Nouveaux clients</h3>
+            <h3>Commandes par jour</h3>
             <apexchart
-              v-if="nouveauxClients.points && nouveauxClients.points.length > 1"
+              v-if="evolutionCA.points && evolutionCA.points.length > 1"
               type="bar"
               height="260"
-              :options="optionsNouveauxClients"
-              :series="serieNouveauxClients"
+              :options="optionsCommandesParJour"
+              :series="serieCommandesParJour"
             />
             <p v-else class="sanaa-empty">Pas assez de données sur la période.</p>
           </div>
@@ -406,16 +406,21 @@ export default {
         legend: { position: 'bottom' },
       };
     },
-    serieNouveauxClients() {
-      return [{ name: 'Nouveaux clients', data: this.nouveauxClients.points.map((p) => p.nombre) }];
+    // Nombre de commandes reçues par période : même source et mêmes statuts que
+    // le CA (évolution du CA), donc cohérent avec les cartes du haut. Le total
+    // « Nouveaux clients » reste affiché dans les cartes.
+    serieCommandesParJour() {
+      return [{ name: 'Commandes', data: this.evolutionCA.points.map((p) => p.nombre_commandes) }];
     },
-    optionsNouveauxClients() {
+    optionsCommandesParJour() {
       return {
         chart: { toolbar: { show: false } },
-        colors: ['#4C8064'],
-        xaxis: { categories: this.nouveauxClients.points.map((p) => p.periode) },
+        colors: ['#97643E'],
+        xaxis: { categories: this.evolutionCA.points.map((p) => p.periode) },
+        yaxis: { min: 0, forceNiceScale: true, labels: { formatter: (v) => String(Math.round(v)) } },
         dataLabels: { enabled: false },
         plotOptions: { bar: { borderRadius: 4 } },
+        tooltip: { y: { formatter: (v) => `${v} commande${v > 1 ? 's' : ''}` } },
       };
     },
     // Trois mini-graphiques superposés (une échelle chacun) : les dépenses de
