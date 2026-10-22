@@ -224,14 +224,16 @@
 
         <div class="sanaa-grid sanaa-grid--charts">
           <div class="sanaa-card" style="grid-column: 1 / -1">
-            <h3>Analyse CA / Publicité / Dépenses</h3>
-            <apexchart
-              v-if="analyseCaPubDepenses.points && analyseCaPubDepenses.points.length > 1"
-              type="line"
-              height="280"
-              :options="optionsAnalyse"
-              :series="serieAnalyse"
-            />
+            <h3>Suivi CA / Publicité / Confection</h3>
+            <template v-if="analyseCaPubDepenses.points && analyseCaPubDepenses.points.length > 1">
+              <div v-for="s in suiviAnalyse" :key="s.cle" class="suivi">
+                <div class="suivi__tete">
+                  <span class="suivi__titre" :style="{ color: s.couleur }">{{ s.titre }}</span>
+                  <strong>{{ s.total | montant(deviseSymbole) }}</strong>
+                </div>
+                <apexchart :type="s.type" height="150" :options="s.options" :series="s.series" />
+              </div>
+            </template>
             <p v-else class="sanaa-empty">Pas assez de données sur la période.</p>
           </div>
         </div>
@@ -270,6 +272,15 @@ function couleurDepense(type) {
   let hash = 0;
   for (let i = 0; i < nom.length; i += 1) hash = (hash * 31 + nom.charCodeAt(i)) % 997;
   return COULEURS_DEPENSE_AUTRES[hash % COULEURS_DEPENSE_AUTRES.length];
+}
+
+// Axe lisible des mini-graphiques de suivi : 1 200 000 -> « 1,2 M », 45 000 -> « 45 k ».
+function formaterCompact(v) {
+  const n = Number(v) || 0;
+  const abs = Math.abs(n);
+  if (abs >= 1e6) return `${(n / 1e6).toFixed(1).replace('.', ',')} M`;
+  if (abs >= 1e3) return `${Math.round(n / 1e3)} k`;
+  return String(Math.round(n));
 }
 
 // Couleurs fixes du graphique « Répartition des livraisons » (retour du 08/10/2026).
@@ -407,22 +418,42 @@ export default {
         plotOptions: { bar: { borderRadius: 4 } },
       };
     },
-    serieAnalyse() {
-      return [
-        { name: 'CA', data: this.analyseCaPubDepenses.points.map((p) => p.ca) },
-        { name: 'Publicité', data: this.analyseCaPubDepenses.points.map((p) => p.publicite) },
-        { name: 'Dépenses totales', data: this.analyseCaPubDepenses.points.map((p) => p.depenses) },
+    // Trois mini-graphiques superposés (une échelle chacun) : les dépenses de
+    // confection, groupées, écrasaient le CA et la publicité sur un axe commun.
+    suiviAnalyse() {
+      const points = this.analyseCaPubDepenses.points || [];
+      const symbole = this.deviseSymbole;
+      const defs = [
+        { cle: 'ca', titre: "Chiffre d'affaires", couleur: '#CEA77B', type: 'area' },
+        { cle: 'publicite', titre: 'Publicité', couleur: '#3B7DD8', type: 'bar' },
+        { cle: 'confection', titre: 'Confection', couleur: '#4C8064', type: 'bar' },
       ];
-    },
-    optionsAnalyse() {
-      return {
-        chart: { toolbar: { show: false } },
-        colors: ['#CEA77B', '#B4483B', '#8a7256'],
-        stroke: { curve: 'smooth', width: 2 },
-        xaxis: { categories: this.analyseCaPubDepenses.points.map((p) => p.periode) },
-        dataLabels: { enabled: false },
-        legend: { position: 'bottom' },
-      };
+      return defs.map((d, i) => {
+        const valeurs = points.map((p) => p[d.cle]);
+        return {
+          ...d,
+          total: valeurs.reduce((a, b) => a + Number(b || 0), 0),
+          series: [{ name: d.titre, data: valeurs }],
+          options: {
+            chart: { toolbar: { show: false }, zoom: { enabled: false }, group: 'suivi-ca-pub-confection', id: 'suivi-' + d.cle },
+            colors: [d.couleur],
+            stroke: { curve: 'smooth', width: d.type === 'area' ? 2 : 0 },
+            fill: { opacity: d.type === 'area' ? 0.25 : 1 },
+            plotOptions: { bar: { borderRadius: 3, columnWidth: '60%' } },
+            dataLabels: { enabled: false },
+            legend: { show: false },
+            grid: { padding: { left: 8, right: 8 } },
+            xaxis: {
+              categories: points.map((p) => p.periode),
+              labels: { show: i === defs.length - 1, rotate: -45 },
+              axisTicks: { show: i === defs.length - 1 },
+              tooltip: { enabled: false },
+            },
+            yaxis: { min: 0, labels: { minWidth: 48, formatter: (v) => formaterCompact(v) } },
+            tooltip: { y: { formatter: (v) => formaterMontant(v, symbole) } },
+          },
+        };
+      });
     },
     partCaParPays() {
       return (this.comparaison.pays || []).filter((p) => Number(p.ca_converti) > 0);
@@ -530,6 +561,22 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.suivi {
+  & + & {
+    margin-top: 4px;
+  }
+  &__tete {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 0 4px;
+  }
+  &__titre {
+    font-weight: 600;
+    font-size: 13px;
+  }
+}
 .periode-selecteur {
   display: flex;
   flex-wrap: wrap;
