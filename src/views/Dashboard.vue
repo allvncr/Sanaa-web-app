@@ -226,7 +226,7 @@
           <div class="sanaa-card" style="grid-column: 1 / -1">
             <h3>Suivi CA / Publicité / Confection</h3>
             <template v-if="analyseCaPubDepenses.points && analyseCaPubDepenses.points.length > 1">
-              <div v-for="s in suiviAnalyse" :key="s.cle" class="suivi">
+              <div v-for="s in suiviAnalyse" :key="s.cle + s.series[0].data.length + s.options.xaxis.categories[0]" class="suivi">
                 <div class="suivi__tete">
                   <span class="suivi__titre" :style="{ color: s.couleur }">{{ s.titre }}</span>
                   <strong>{{ s.total | montant(deviseSymbole) }}</strong>
@@ -435,7 +435,7 @@ export default {
           total: valeurs.reduce((a, b) => a + Number(b || 0), 0),
           series: [{ name: d.titre, data: valeurs }],
           options: {
-            chart: { toolbar: { show: false }, zoom: { enabled: false }, group: 'suivi-ca-pub-confection', id: 'suivi-' + d.cle },
+            chart: { toolbar: { show: false }, zoom: { enabled: false } },
             colors: [d.couleur],
             stroke: { curve: 'smooth', width: d.type === 'area' ? 2 : 0 },
             fill: { opacity: d.type === 'area' ? 0.25 : 1 },
