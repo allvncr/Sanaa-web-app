@@ -1,16 +1,22 @@
 import api from './api';
 
 export default {
-  niveaux(params) {
-    return api.get('/stock', { params });
+  articles(params) {
+    return api.get('/stock/articles', { params });
   },
-  listerMouvements(params) {
+  creerArticle(data) {
+    return api.post('/stock/articles', data);
+  },
+  modifierArticle(id, data) {
+    return api.patch(`/stock/articles/${id}`, data);
+  },
+  mouvements(params) {
     return api.get('/stock/mouvements', { params });
   },
   enregistrerMouvement(data) {
     return api.post('/stock/mouvements', data);
   },
-  creerTransfert(data) {
-    return api.post('/stock/transferts', data);
+  annulerMouvement(id) {
+    return api.patch(`/stock/mouvements/${id}/annuler`);
   },
 };
