@@ -8,6 +8,7 @@ import store from './store';
 import i18n from './i18n';
 import permissionsPlugin from './plugins/permissions';
 import { formaterMontant, formaterDate, formaterDateHeure } from './utils/format';
+import { initialiserTheme } from './utils/theme';
 
 import 'element-ui/lib/theme-chalk/index.css';
 import './assets/styles/global.scss';
@@ -22,6 +23,8 @@ Vue.filter('dateFr', formaterDate);
 Vue.filter('dateHeureFr', formaterDateHeure);
 
 Vue.config.productionTip = false;
+
+initialiserTheme();
 
 new Vue({
   router,

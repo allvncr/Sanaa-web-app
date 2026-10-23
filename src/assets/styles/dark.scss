@@ -1,0 +1,120 @@
+// Mode sombre (retour du 23/10/2026). Activé par l'attribut data-theme="dark"
+// sur <html> (voir utils/theme.js). On redéfinit les variables de la palette,
+// puis on corrige les composants Element UI et les graphiques ApexCharts, qui
+// ont des couleurs claires codées en dur.
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --sanaa-bg: #1b1714;
+  --sanaa-bg-alt: #2a241f;
+  --sanaa-surface: #231e1a;
+  --sanaa-border: #3d352d;
+  --sanaa-text: #efe6da;
+  --sanaa-text-muted: #b5a591;
+  --sanaa-accent-1-soft: #3b3027;
+  --sanaa-accent-2-dark: #e0b98a;
+  --sanaa-success: #6fbf94;
+  --sanaa-warning: #e2a74d;
+  --sanaa-danger: #e0786b;
+  --sanaa-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sanaa-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --sanaa-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+[data-theme='dark'] {
+  // Boutons de contenu : le texte « bouton primaire » reste lisible.
+  .el-button--primary { color: #1b1714; }
+  .el-button:not(.el-button--primary):not(.el-button--danger):not(.el-button--text) {
+    background: var(--sanaa-surface);
+    border-color: var(--sanaa-border);
+    color: var(--sanaa-text);
+    &:hover, &:focus { background: var(--sanaa-bg-alt); border-color: var(--sanaa-accent-1); color: var(--sanaa-accent-1); }
+  }
+  .el-button.is-plain.el-button--primary { color: var(--sanaa-accent-2-dark); }
+  .el-button.is-disabled, .el-button.is-disabled:hover { background: var(--sanaa-bg-alt) !important; color: #7d7163 !important; }
+
+  // Champs
+  .el-input__inner, .el-textarea__inner, .el-range-editor.el-input__inner, .el-input-number__decrease, .el-input-number__increase {
+    background-color: var(--sanaa-surface);
+    border-color: var(--sanaa-border);
+    color: var(--sanaa-text);
+  }
+  .el-input.is-disabled .el-input__inner, .el-textarea.is-disabled .el-textarea__inner {
+    background-color: var(--sanaa-bg-alt);
+    color: var(--sanaa-text-muted);
+  }
+  .el-input__inner::placeholder, .el-textarea__inner::placeholder, .el-range-input::placeholder { color: #8a7d6d; }
+  .el-range-input, .el-range-separator { background: transparent; color: var(--sanaa-text); }
+  .el-input-group__append, .el-input-group__prepend { background: var(--sanaa-bg-alt); border-color: var(--sanaa-border); color: var(--sanaa-text-muted); }
+  .el-checkbox__inner, .el-radio__inner { background: var(--sanaa-surface); border-color: var(--sanaa-border); }
+  .el-radio-button__inner { background: var(--sanaa-surface); border-color: var(--sanaa-border); color: var(--sanaa-text); }
+  .el-radio-button__orig-radio:checked + .el-radio-button__inner { background: var(--sanaa-accent-2); border-color: var(--sanaa-accent-2); color: #1b1714; box-shadow: -1px 0 0 0 var(--sanaa-accent-2); }
+  .el-form-item__label { color: var(--sanaa-text-muted); }
+
+  // Tableaux
+  .el-table, .el-table tr, .el-table td.el-table__cell, .el-table th.el-table__cell {
+    background-color: var(--sanaa-surface);
+    color: var(--sanaa-text);
+  }
+  .el-table th.el-table__cell { background: var(--sanaa-bg-alt); }
+  .el-table td.el-table__cell, .el-table th.el-table__cell.is-leaf, .el-table--border, .el-table--group { border-color: var(--sanaa-border); }
+  .el-table::before, .el-table--group::after, .el-table--border::after { background-color: var(--sanaa-border); }
+  .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell { background: var(--sanaa-bg-alt); }
+  .el-table__empty-block, .el-table__empty-text { background: var(--sanaa-surface); color: var(--sanaa-text-muted); }
+  .el-table__body tr.hover-row > td.el-table__cell, .el-table__row:hover > td.el-table__cell { background: var(--sanaa-accent-1-soft) !important; }
+
+  // Menus déroulants, fenêtres, info-bulles
+  .el-select-dropdown, .el-popper, .el-dropdown-menu, .el-picker-panel, .el-date-picker, .el-date-range-picker,
+  .el-time-panel, .el-cascader__dropdown {
+    background: var(--sanaa-surface);
+    border-color: var(--sanaa-border);
+    color: var(--sanaa-text);
+  }
+  .el-popper[x-placement^='bottom'] .popper__arrow::after { border-bottom-color: var(--sanaa-surface); }
+  .el-popper[x-placement^='top'] .popper__arrow::after { border-top-color: var(--sanaa-surface); }
+  .el-select-dropdown__item, .el-dropdown-menu__item, .el-picker-panel__shortcut, .el-date-table td span, .el-date-picker__header-label,
+  .el-date-table th, .el-month-table td .cell, .el-year-table td .cell { color: var(--sanaa-text); }
+  .el-select-dropdown__item.hover, .el-select-dropdown__item:hover, .el-dropdown-menu__item:hover, .el-dropdown-menu__item:focus { background: var(--sanaa-bg-alt); color: var(--sanaa-accent-1); }
+  .el-select-dropdown__item.selected { color: var(--sanaa-accent-1); }
+  .el-date-table td.disabled div, .el-date-table td.prev-month, .el-date-table td.next-month { background: transparent; color: #7d7163; }
+  .el-picker-panel__footer, .el-date-picker__header--bordered, .el-date-range-picker__content.is-left { border-color: var(--sanaa-border); background: var(--sanaa-surface); }
+  .el-dialog, .el-message-box, .el-drawer, .el-card { background: var(--sanaa-surface); border-color: var(--sanaa-border); color: var(--sanaa-text); }
+  .el-dialog__header { background: var(--sanaa-bg-alt); }
+  .el-dialog__title, .el-message-box__title { color: var(--sanaa-text); }
+  .el-dialog__body, .el-message-box__message { color: var(--sanaa-text); }
+  .el-message { background: var(--sanaa-surface); border-color: var(--sanaa-border); }
+  .el-notification { background: var(--sanaa-surface); border-color: var(--sanaa-border); }
+  .el-notification__title, .el-notification__content { color: var(--sanaa-text); }
+  .el-divider { background-color: var(--sanaa-border); }
+  .el-divider__text { background: var(--sanaa-bg); color: var(--sanaa-text-muted); }
+  .el-loading-mask { background-color: rgba(27, 23, 20, 0.7); }
+  .el-pagination button, .el-pagination .el-pager li { background: var(--sanaa-surface); color: var(--sanaa-text); }
+  .el-pagination.is-background .btn-next, .el-pagination.is-background .btn-prev, .el-pagination.is-background .el-pager li { background: var(--sanaa-bg-alt); }
+  .el-tabs__nav-wrap::after { background-color: var(--sanaa-border); }
+  .el-tabs__item { color: var(--sanaa-text-muted); }
+  .el-tag { background: var(--sanaa-bg-alt); border-color: var(--sanaa-border); color: var(--sanaa-text); }
+  .el-collapse, .el-collapse-item__header, .el-collapse-item__wrap { background: var(--sanaa-surface); border-color: var(--sanaa-border); color: var(--sanaa-text); }
+  .el-step__title, .el-step__description { color: var(--sanaa-text-muted); }
+  .el-timeline-item__timestamp { color: var(--sanaa-text-muted); }
+  .el-alert { background-color: var(--sanaa-bg-alt); }
+  .el-alert__title, .el-alert__description { color: var(--sanaa-text); }
+
+  // Graphiques ApexCharts : textes, grilles, info-bulles et légendes.
+  .apexcharts-text, .apexcharts-xaxis-label, .apexcharts-yaxis-label { fill: var(--sanaa-text-muted) !important; }
+  .apexcharts-legend-text { color: var(--sanaa-text) !important; }
+  .apexcharts-gridline, .apexcharts-xaxis-tick, .apexcharts-xaxis line, .apexcharts-yaxis line { stroke: var(--sanaa-border) !important; }
+  .apexcharts-tooltip, .apexcharts-xaxistooltip, .apexcharts-yaxistooltip {
+    background: var(--sanaa-surface) !important;
+    border-color: var(--sanaa-border) !important;
+    color: var(--sanaa-text) !important;
+    box-shadow: var(--sanaa-shadow-md) !important;
+  }
+  .apexcharts-tooltip-title { background: var(--sanaa-bg-alt) !important; border-color: var(--sanaa-border) !important; }
+  .apexcharts-datalabel-label, .apexcharts-datalabel-value { fill: var(--sanaa-text) !important; }
+
+  // Sidebar et fonds blancs codés en dur
+  .sanaa-card, .sanaa-kpi { color: var(--sanaa-text); }
+  .sanaa-kpi { background: linear-gradient(155deg, var(--sanaa-surface), var(--sanaa-bg-alt)); }
+  img[src*='logo'] { filter: brightness(1.1); }
+}

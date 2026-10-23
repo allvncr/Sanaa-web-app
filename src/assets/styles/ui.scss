@@ -1,0 +1,219 @@
+// Habillage visuel transverse (retour du 23/10/2026) : badges de statut aux
+// couleurs fixes, pastilles de variation, hiérarchie des cartes KPI, états
+// vides, squelettes de chargement et lignes urgentes. Les couleurs de statut
+// reprennent celles du dashboard (vert livré, jaune en livraison, beige reçu
+// en pays, gris à expédier, rouge échec).
+
+@mixin badge($bg, $fg, $bg-dark, $fg-dark) {
+  --badge-bg: #{$bg};
+  --badge-fg: #{$fg};
+  [data-theme='dark'] & {
+    --badge-bg: #{$bg-dark};
+    --badge-fg: #{$fg-dark};
+  }
+}
+
+.sanaa-badge-statut {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--badge-bg, var(--sanaa-bg-alt));
+  color: var(--badge-fg, var(--sanaa-text-muted));
+
+  &::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  // Commande
+  &.is-nouvelle { @include badge(#efeae2, #6b5d4f, #3a332c, #cdbfae); }
+  &.is-confirmee { @include badge(#e3f0e8, #2f6b4a, #21392d, #8fd0ab); }
+  &.is-annulee, &.is-refusee { @include badge(#f7e3df, #a23a2e, #432522, #f0a79d); }
+  // Fabrication
+  &.is-a-produire { @include badge(#ececec, #5f5f5f, #35322f, #c4bdb4); }
+  &.is-en-fabrication { @include badge(#e1ecf8, #2c5d99, #1f3047, #9cc2ef); }
+  &.is-terminee { @include badge(#e3f0e8, #2f6b4a, #21392d, #8fd0ab); }
+  &.is-erreur { @include badge(#f7e3df, #a23a2e, #432522, #f0a79d); }
+  // Livraison (couleurs du graphique « Répartition des livraisons »)
+  &.is-a-expedier { @include badge(#ececec, #5f5f5f, #35322f, #c4bdb4); }
+  &.is-recue-en-pays { @include badge(#f1e3d0, #7a5732, #43372a, #e0c49f); }
+  &.is-en-livraison { @include badge(#fbf0c9, #85650d, #473b16, #f0d57a); }
+  &.is-livree { @include badge(#e3f0e8, #2f6b4a, #21392d, #8fd0ab); }
+  &.is-retour-echec { @include badge(#f7e3df, #a23a2e, #432522, #f0a79d); }
+}
+
+// ----- Cartes KPI -----
+.sanaa-kpi {
+  position: relative;
+  overflow: hidden;
+
+  &.sanaa-kpi--principal {
+    padding: 20px 20px 16px;
+    border-top: 3px solid var(--sanaa-accent-1);
+    .sanaa-kpi-value { font-size: 2.05rem; line-height: 1.15; }
+  }
+  &.sanaa-kpi--secondaire {
+    padding: 14px 16px;
+    .sanaa-kpi-value { font-size: 1.25rem; }
+  }
+}
+
+// Pastille de variation vs période précédente (hausse / baisse).
+.sanaa-kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: var(--sanaa-bg-alt);
+  color: var(--sanaa-text-muted);
+
+  &.is-hausse {
+    background: color-mix(in srgb, var(--sanaa-success) 16%, transparent);
+    color: var(--sanaa-success);
+    &::before { content: '▲'; font-size: 0.6rem; }
+  }
+  &.is-baisse {
+    background: color-mix(in srgb, var(--sanaa-danger) 14%, transparent);
+    color: var(--sanaa-danger);
+    &::before { content: '▼'; font-size: 0.6rem; }
+  }
+}
+
+// ----- États vides -----
+.sanaa-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 36px 20px;
+  color: var(--sanaa-text-muted);
+  font-size: 0.9rem;
+
+  &::before {
+    content: '';
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background-color: var(--sanaa-bg-alt);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 28px;
+    // Petit diamant (bijou) — pas d'icône de police nécessaire.
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23CEA77B' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M6 3h12l4 6-10 12L2 9z'/%3E%3Cpath d='M2 9h20M9 3l-2 6 5 12 5-12-2-6'/%3E%3C/svg%3E");
+  }
+}
+
+// ----- Squelettes de chargement -----
+@keyframes sanaa-shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.sanaa-skeleton {
+  border-radius: var(--sanaa-radius-md);
+  background: linear-gradient(90deg, var(--sanaa-bg-alt) 25%, var(--sanaa-border) 37%, var(--sanaa-bg-alt) 63%);
+  background-size: 800px 100%;
+  animation: sanaa-shimmer 1.4s ease-in-out infinite;
+
+  &.sanaa-skeleton--kpi { height: 104px; }
+  &.sanaa-skeleton--chart { height: 300px; }
+  &.sanaa-skeleton--ligne { height: 46px; margin-bottom: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sanaa-skeleton { animation: none; }
+}
+
+// ----- Urgences (lignes de tableau / cartes) -----
+.el-table .ligne-retard td.el-table__cell:first-child { box-shadow: inset 3px 0 0 var(--sanaa-danger); }
+.el-table .ligne-attention td.el-table__cell:first-child { box-shadow: inset 3px 0 0 var(--sanaa-warning); }
+
+.sanaa-pastille-retard {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--sanaa-danger);
+  &.is-attention { background: var(--sanaa-warning); }
+}
+
+// ----- Pastilles de filtres actifs -----
+.sanaa-filtres-actifs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 14px;
+
+  .sanaa-filtre-pastille {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px 3px 12px;
+    border-radius: 999px;
+    background: var(--sanaa-accent-1-soft);
+    color: var(--sanaa-accent-2-dark);
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 1px solid var(--sanaa-accent-1);
+
+    button {
+      border: none;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 50%;
+      &:hover { background: rgba(0, 0, 0, 0.08); }
+    }
+  }
+  .sanaa-filtres-effacer {
+    border: none;
+    background: transparent;
+    color: var(--sanaa-text-muted);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.78rem;
+  }
+}
+
+// ----- Écran livreur : contraste élevé (lisibilité en plein soleil) -----
+[data-contrast='high'] .app {
+  --sanaa-bg: #ffffff;
+  --sanaa-bg-alt: #f1f1f1;
+  --sanaa-surface: #ffffff;
+  --sanaa-text: #000000;
+  --sanaa-text-muted: #1f1f1f;
+  --sanaa-border: #000000;
+  --sanaa-accent-2: #5a2d0c;
+  --sanaa-accent-2-dark: #4a2208;
+  --sanaa-success: #0a6a28;
+  --sanaa-danger: #b00020;
+  color: #000;
+
+  .carte, .hero, .caisse, .bloc, .moyen, .champ-gros input, .onglets {
+    border: 2px solid #000 !important;
+    box-shadow: none !important;
+  }
+  .hero, .caisse { background: #000 !important; color: #fff !important; * { color: #fff !important; } }
+  .btn--ok { background: #0a6a28 !important; }
+  .btn--ko { background: #b00020 !important; }
+  .muted, .carte__adresse, .carte__jour { color: #1f1f1f !important; }
+  .jour-chip, .onglet { font-weight: 700; }
+}

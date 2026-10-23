@@ -40,6 +40,14 @@
       <el-button size="small" icon="el-icon-refresh" @click="charger">Actualiser</el-button>
     </div>
 
+    <div v-if="pastilles.length" class="sanaa-filtres-actifs">
+      <span v-for="p in pastilles" :key="p.cle" class="sanaa-filtre-pastille">
+        {{ p.texte }}
+        <button type="button" :aria-label="'Retirer le filtre ' + p.texte" @click="retirerFiltre(p.cle)">×</button>
+      </span>
+      <button type="button" class="sanaa-filtres-effacer" @click="effacerFiltres">Tout effacer</button>
+    </div>
+
     <div v-if="selection.length > 0" class="sanaa-card barre-lot">
       <span><strong>{{ selection.length }}</strong> commande{{ selection.length > 1 ? 's' : '' }} sélectionnée{{ selection.length > 1 ? 's' : '' }}</span>
       <el-select v-model="lot.statut_fabrication" placeholder="Fabrication : ne pas changer" clearable size="small" style="width:220px">
@@ -60,10 +68,22 @@
       <el-button size="small" @click="viderSelection">Annuler la sélection</el-button>
     </div>
 
-    <div class="sanaa-card sanaa-table-scroll" v-loading="chargement">
-      <el-table ref="tableau" :data="commandes" stripe row-key="_id" @row-click="ouvrir" @selection-change="selection = $event">
+    <div class="sanaa-card hide-mobile" v-if="chargement && commandes.length === 0">
+      <div v-for="n in 8" :key="n" class="sanaa-skeleton sanaa-skeleton--ligne" />
+    </div>
+    <div v-else class="sanaa-card sanaa-table-scroll hide-mobile" v-loading="chargement">
+      <el-table ref="tableau" :data="commandes" stripe row-key="_id" :row-class-name="classeLigne" @row-click="ouvrir" @selection-change="selection = $event">
         <el-table-column v-if="$can('commandes:changer_statut')" type="selection" width="44" />
-        <el-table-column prop="numero" label="Numéro" min-width="140" />
+        <el-table-column label="Numéro" min-width="150">
+          <template slot-scope="{ row }">
+            <span
+              v-if="retardDe(row)"
+              class="sanaa-pastille-retard"
+              :class="{ 'is-attention': retardDe(row).niveau === 'attention' }"
+              :title="retardDe(row).texte"
+            />{{ row.numero }}
+          </template>
+        </el-table-column>
         <el-table-column label="Client" min-width="160">
           <template slot-scope="{ row }">{{ row.client_id ? row.client_id.nom : '—' }}</template>
         </el-table-column>
@@ -109,6 +129,39 @@
       <p v-if="!chargement && commandes.length === 0" class="sanaa-empty">Aucune commande trouvée.</p>
       <PaginationBarre :page="pagination.page" :limite="pagination.limite" :total="pagination.total" @update:page="changerPage" @update:limite="changerLimite" />
     </div>
+
+    <!-- Téléphone : une carte par commande (le tableau large oblige à défiler de côté). -->
+    <div class="hide-desktop" v-loading="chargement && commandes.length > 0">
+      <template v-if="chargement && commandes.length === 0">
+        <div v-for="n in 5" :key="n" class="sanaa-skeleton sanaa-skeleton--ligne" style="height: 96px" />
+      </template>
+      <article
+        v-for="row in commandes"
+        :key="row._id"
+        class="sanaa-card carte-commande"
+        :class="classeCarte(row)"
+        @click="ouvrir(row)"
+      >
+        <header class="carte-commande__tete">
+          <strong>{{ row.numero }}</strong>
+          <StatutBadge :statut="row.statut_livraison" :libelles="statutsLivraison" />
+        </header>
+        <p class="carte-commande__client">{{ row.client_id && row.client_id.nom ? row.client_id.nom : '—' }}<span v-if="row.pays_id" class="sanaa-text-muted"> · {{ row.pays_id.code }}</span></p>
+        <p v-if="retardDe(row)" class="carte-commande__alerte" :class="{ 'is-attention': retardDe(row).niveau === 'attention' }">
+          <span class="sanaa-pastille-retard" :class="{ 'is-attention': retardDe(row).niveau === 'attention' }" />{{ retardDe(row).texte }}
+        </p>
+        <footer class="carte-commande__pied">
+          <span class="carte-commande__total">{{ row.total | montant }}</span>
+          <StatutBadge :statut="row.statut_fabrication" :libelles="statutsFabrication" />
+          <span class="sanaa-text-muted">{{ row.createdAt | dateFr }}</span>
+          <el-button type="text" class="btn-whatsapp-ligne" icon="el-icon-chat-dot-round" @click.stop="envoyerWhatsApp(row)" />
+        </footer>
+      </article>
+      <div v-if="!chargement && commandes.length === 0" class="sanaa-card"><p class="sanaa-empty">Aucune commande trouvée.</p></div>
+      <div v-if="commandes.length" class="sanaa-card carte-pagination">
+        <PaginationBarre :page="pagination.page" :limite="pagination.limite" :total="pagination.total" @update:page="changerPage" @update:limite="changerLimite" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -118,6 +171,7 @@ import commandesApi from '@/services/commandes.api';
 import StatutBadge from '@/components/common/StatutBadge.vue';
 import PaginationBarre from '@/components/common/PaginationBarre.vue';
 import { lienWhatsApp } from '@/utils/whatsapp';
+import { retardCommande } from '@/utils/retards';
 
 export default {
   name: 'CommandesListe',
@@ -142,6 +196,23 @@ export default {
   },
   computed: {
     ...mapState('paysContexte', { paysActifId: 'paysActifId' }),
+    // Filtres actifs sous forme de pastilles retirables d'un clic.
+    pastilles() {
+      const f = this.filtres;
+      const liste = [];
+      if (f.q) liste.push({ cle: 'q', texte: `Recherche : ${f.q}` });
+      if (f.creePar) {
+        const u = this.createurs.find((c) => c._id === f.creePar);
+        liste.push({ cle: 'creePar', texte: `Saisi par ${u ? u.nom : '…'}` });
+      }
+      if (f.fabrication) liste.push({ cle: 'fabrication', texte: `Fabrication : ${this.statutsFabrication[f.fabrication] || f.fabrication}` });
+      if (f.livraison) liste.push({ cle: 'livraison', texte: `Livraison : ${this.statutsLivraison[f.livraison] || f.livraison}` });
+      if (f.plage && f.plage.length === 2) {
+        const fr = (d) => String(d).split('-').reverse().join('/');
+        liste.push({ cle: 'plage', texte: `Du ${fr(f.plage[0])} au ${fr(f.plage[1])}` });
+      }
+      return liste;
+    },
   },
   watch: {
     paysActifId() {
@@ -191,6 +262,26 @@ export default {
       if (JSON.stringify(query) !== JSON.stringify(this.$route.query)) {
         this.$router.replace({ query }).catch(() => {});
       }
+    },
+    retardDe(row) {
+      return retardCommande(row);
+    },
+    classeLigne({ row }) {
+      const r = retardCommande(row);
+      if (!r) return '';
+      return r.niveau === 'retard' ? 'ligne-retard' : 'ligne-attention';
+    },
+    classeCarte(row) {
+      const r = retardCommande(row);
+      return r ? `carte-commande--${r.niveau}` : '';
+    },
+    retirerFiltre(cle) {
+      this.filtres = { ...this.filtres, [cle]: cle === 'plage' ? [] : '' };
+      this.chargerDepuisFiltre();
+    },
+    effacerFiltres() {
+      this.filtres = { q: '', creePar: '', fabrication: '', livraison: '', plage: [] };
+      this.chargerDepuisFiltre();
     },
     async chargerCreateurs() {
       try {
@@ -324,10 +415,24 @@ export default {
 };
 </script>
 
-<style scoped>
-.el-table >>> .el-table__row { cursor: pointer; }
+<style lang="scss" scoped>
+.el-table ::v-deep .el-table__row { cursor: pointer; }
 .recherche { width: 340px; max-width: 100%; }
 .btn-whatsapp-ligne { color: #25D366; font-size: 1.25rem; padding: 0; }
+.carte-commande {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-left: 4px solid transparent;
+}
+.carte-commande--retard { border-left-color: var(--sanaa-danger); }
+.carte-commande--attention { border-left-color: var(--sanaa-warning); }
+.carte-commande__tete { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.carte-commande__client { margin: 6px 0 2px; font-size: 0.95rem; }
+.carte-commande__alerte { margin: 4px 0 0; font-size: 0.8rem; color: var(--sanaa-danger); &.is-attention { color: var(--sanaa-warning); } }
+.carte-commande__pied { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; font-size: 0.82rem; }
+.carte-commande__total { font-weight: 700; margin-right: auto; }
+.carte-pagination { padding: 8px; }
 .barre-lot {
   display: flex;
   flex-wrap: wrap;

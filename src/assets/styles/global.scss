@@ -1,5 +1,7 @@
 @import './variables.scss';
 @import './element-theme.scss';
+@import './ui.scss';
+@import './dark.scss';
 
 * { box-sizing: border-box; }
 
@@ -107,32 +109,6 @@ a { color: var(--sanaa-accent-2); text-decoration: none; }
     font-size: 0.78rem;
     color: var(--sanaa-text-muted);
   }
-}
-
-.sanaa-badge-statut {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: var(--sanaa-bg-alt);
-  color: var(--sanaa-text-muted);
-
-  &.is-nouvelle { background: #EFEAE2; color: #6b5d4f; }
-  &.is-confirmee { background: #E6F0EA; color: var(--sanaa-success); }
-  &.is-annulee, &.is-refusee { background: #F5E4E1; color: var(--sanaa-danger); }
-  &.is-en-fabrication, &.is-en-livraison { background: #F3E7D3; color: var(--sanaa-accent-2-dark); }
-  &.is-terminee, &.is-livree { background: #E6F0EA; color: var(--sanaa-success); }
-  &.is-a-produire, &.is-a-expedier, &.is-recue-en-pays { background: #EDEDF2; color: #5c5c78; }
-  &.is-retour-echec, &.is-erreur { background: #F5E4E1; color: var(--sanaa-danger); }
-}
-
-.sanaa-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--sanaa-text-muted);
 }
 
 // Utilitaires responsive

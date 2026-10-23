@@ -16,10 +16,13 @@
       </el-tab-pane>
     </el-tabs>
 
-    <section v-loading="chargement" class="sanaa-card bloc">
+    <section class="sanaa-card bloc" v-loading="chargement && donnees[ongletActif] !== null">
       <p class="sanaa-text-muted bloc__description">{{ typeActif.description }}</p>
 
-      <p v-if="!chargement && lignes.length === 0" class="vide"><i class="el-icon-circle-check" /> Personne à relancer pour le moment.</p>
+      <template v-if="donnees[ongletActif] === null">
+        <div v-for="n in 4" :key="n" class="sanaa-skeleton sanaa-skeleton--ligne" />
+      </template>
+      <p v-else-if="lignes.length === 0" class="vide"><i class="el-icon-circle-check" /> Personne à relancer pour le moment.</p>
 
       <ul v-else class="lignes">
         <li v-for="i in lignes" :key="i.cle" class="ligne">

@@ -33,29 +33,48 @@
       </div>
     </div>
 
-    <div v-loading="chargement">
+    <div v-if="premierChargement" class="squelette-dashboard">
+      <div class="sanaa-grid sanaa-grid--kpis">
+        <div v-for="n in 4" :key="n" class="sanaa-skeleton sanaa-skeleton--kpi" />
+      </div>
+      <div class="sanaa-grid sanaa-grid--charts">
+        <div class="sanaa-skeleton sanaa-skeleton--chart" />
+        <div class="sanaa-skeleton sanaa-skeleton--chart" />
+      </div>
+    </div>
+
+    <div v-else v-loading="chargement">
       <template v-if="estVueGlobale">
-        <div class="sanaa-grid sanaa-grid--kpis">
-          <div class="sanaa-kpi">
+        <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--principaux">
+          <div class="sanaa-kpi sanaa-kpi--principal">
             <span class="sanaa-kpi-label">CA consolidé ({{ comparaison.devise_affichage }})</span>
             <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.ca_converti | montant }}</span>
+            <Sparkline :valeurs="valeursCA" :couleur="COULEURS.ca" />
           </div>
-          <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">Montant perçu consolidé</span>
-            <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.encaissements_convertis | montant }}</span>
-          </div>
-          <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">Dépenses consolidées</span>
-            <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.depenses_converties | montant }}</span>
-          </div>
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--principal">
             <span class="sanaa-kpi-label">Bénéfice consolidé</span>
             <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.benefice_converti | montant }}</span>
           </div>
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--principal">
+            <span class="sanaa-kpi-label">Commandes</span>
+            <span class="sanaa-kpi-value">{{ totalCommandes }}</span>
+            <Sparkline :valeurs="valeursCommandes" :couleur="COULEURS.commandes" />
+          </div>
+        </div>
+        <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--secondaires">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
+            <span class="sanaa-kpi-label">Montant perçu consolidé</span>
+            <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.encaissements_convertis | montant }}</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
+            <span class="sanaa-kpi-label">Dépenses consolidées</span>
+            <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.depenses_converties | montant }}</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Nouveaux clients</span>
             <span class="sanaa-kpi-value">{{ nouveauxClients.total || 0 }}</span>
             <span v-if="deltaClients" class="sanaa-kpi-delta" :class="classeDeltaClients">{{ deltaClients }} {{ libelleComparaison }}</span>
+            <Sparkline :valeurs="valeursClients" :couleur="COULEURS.clients" />
           </div>
         </div>
 
@@ -100,48 +119,55 @@
       </template>
 
       <template v-else-if="kpisData">
-        <div class="sanaa-grid sanaa-grid--kpis">
-          <div class="sanaa-kpi">
+        <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--principaux">
+          <div class="sanaa-kpi sanaa-kpi--principal">
             <span class="sanaa-kpi-label">CA (toutes les commandes)</span>
             <span class="sanaa-kpi-value">{{ kpisData.ca.montant | montant(deviseSymbole) }}</span>
             <span class="sanaa-kpi-sub">commandes passées sur la période, nettes de réduction</span>
             <span v-if="delta('ca')" class="sanaa-kpi-delta" :class="classeDelta('ca')">{{ delta('ca') }} {{ libelleComparaison }}</span>
+            <Sparkline :valeurs="valeursCA" :couleur="COULEURS.ca" />
           </div>
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--principal">
+            <span class="sanaa-kpi-label">Bénéfice</span>
+            <span class="sanaa-kpi-value">{{ kpisData.benefice.montant | montant(deviseSymbole) }}</span>
+            <span class="sanaa-kpi-sub">Marge {{ kpisData.marge_pct }} %</span>
+            <span v-if="delta('benefice')" class="sanaa-kpi-delta" :class="classeDelta('benefice')">{{ delta('benefice') }} {{ libelleComparaison }}</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--principal">
+            <span class="sanaa-kpi-label">Commandes</span>
+            <span class="sanaa-kpi-value">{{ kpisData.nombre_commandes }}</span>
+            <span class="sanaa-kpi-sub">panier moyen {{ panierMoyen | montant(deviseSymbole) }}</span>
+            <span v-if="deltaCommandes" class="sanaa-kpi-delta" :class="classeDeltaCommandes">{{ deltaCommandes }} {{ libelleComparaison }}</span>
+            <Sparkline :valeurs="valeursCommandes" :couleur="COULEURS.commandes" />
+          </div>
+        </div>
+        <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--secondaires">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Montant perçu</span>
-            <span class="sanaa-kpi-sub">avances + paiements à la livraison</span>
             <span class="sanaa-kpi-value">{{ kpisData.encaissements.montant | montant(deviseSymbole) }}</span>
+            <span class="sanaa-kpi-sub">avances + paiements à la livraison</span>
             <span v-if="delta('encaissements')" class="sanaa-kpi-delta" :class="classeDelta('encaissements')">{{ delta('encaissements') }} {{ libelleComparaison }}</span>
           </div>
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Reste à percevoir</span>
             <span class="sanaa-kpi-value">{{ kpisData.reste_a_recevoir.montant | montant(deviseSymbole) }}</span>
           </div>
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Dépenses</span>
             <span class="sanaa-kpi-value">{{ kpisData.depenses.montant | montant(deviseSymbole) }}</span>
             <span v-if="Number(kpisData.surcouts_livraison) !== 0" class="sanaa-kpi-sub">dont {{ kpisData.surcouts_livraison | montant(deviseSymbole) }} de surcoût de livraison</span>
             <span v-if="delta('depenses')" class="sanaa-kpi-delta" :class="classeDelta('depenses', true)">{{ delta('depenses') }} {{ libelleComparaison }}</span>
           </div>
-          <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">Bénéfice</span>
-            <span class="sanaa-kpi-value">{{ kpisData.benefice.montant | montant(deviseSymbole) }}</span>
-            <span class="sanaa-kpi-sub">Marge {{ kpisData.marge_pct }} %</span>
-          </div>
-          <div class="sanaa-kpi">
-            <span class="sanaa-kpi-label">Panier moyen</span>
-            <span class="sanaa-kpi-value">{{ panierMoyen | montant(deviseSymbole) }}</span>
-            <span class="sanaa-kpi-sub">{{ kpisData.nombre_commandes }} commande{{ kpisData.nombre_commandes > 1 ? 's' : '' }}</span>
-          </div>
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Taux de livraison</span>
             <span class="sanaa-kpi-value">{{ kpisData.taux_livraison_pct }} %</span>
             <span class="sanaa-kpi-sub">Annulation {{ kpisData.taux_annulation_pct }} % — Retour {{ kpisData.taux_retour_pct }} %</span>
           </div>
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Nouveaux clients</span>
             <span class="sanaa-kpi-value">{{ nouveauxClients.total || 0 }}</span>
             <span v-if="deltaClients" class="sanaa-kpi-delta" :class="classeDeltaClients">{{ deltaClients }} {{ libelleComparaison }}</span>
+            <Sparkline :valeurs="valeursClients" :couleur="COULEURS.clients" />
           </div>
         </div>
       </template>
@@ -149,18 +175,19 @@
       <template v-if="estVueGlobale || kpisData">
         <h2 class="sanaa-section-title">Rentabilité de la publicité</h2>
         <div class="sanaa-grid sanaa-grid--kpis">
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Dépenses publicité</span>
             <span class="sanaa-kpi-value">{{ rentabilitePub.publicite | montant(symboleRentabilite) }}</span>
             <span v-if="deltaRentabilite('publicite')" class="sanaa-kpi-delta is-neutre">{{ deltaRentabilite('publicite') }} {{ libelleComparaison }}</span>
+            <Sparkline :valeurs="valeursPublicite" :couleur="COULEURS.publicite" />
           </div>
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Coût de pub par commande</span>
             <span class="sanaa-kpi-value">{{ rentabilitePub.cout_par_commande === null ? '—' : formaterMontant(rentabilitePub.cout_par_commande, symboleRentabilite) }}</span>
             <span class="sanaa-kpi-sub">{{ rentabilitePub.nombre_commandes }} commande{{ rentabilitePub.nombre_commandes > 1 ? 's' : '' }} sur la période</span>
             <span v-if="deltaRentabilite('cout_par_commande')" class="sanaa-kpi-delta" :class="classeRentabilite('cout_par_commande', true)">{{ deltaRentabilite('cout_par_commande') }} {{ libelleComparaison }}</span>
           </div>
-          <div class="sanaa-kpi">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Retour sur pub</span>
             <span class="sanaa-kpi-value">{{ rentabilitePub.retour_sur_pub === null ? '—' : `×${String(rentabilitePub.retour_sur_pub).replace('.', ',')}` }}</span>
             <span class="sanaa-kpi-sub">CA généré pour 1 {{ symboleRentabilite || 'unité' }} de pub</span>
@@ -268,6 +295,11 @@ import { mapState, mapGetters } from 'vuex';
 import dashboardApi from '@/services/dashboard.api';
 import referentielsApi from '@/services/referentiels.api';
 import { formaterMontant } from '@/utils/format';
+import Sparkline from '@/components/common/Sparkline.vue';
+
+// Une couleur par thème, la même partout (cartes, courbes, graphiques) :
+// beige = CA, bleu = publicité, vert = confection, brun = commandes.
+const COULEURS = { ca: '#CEA77B', publicite: '#3B7DD8', confection: '#4C8064', commandes: '#97643E', clients: '#7C8A9A', precedent: '#9B9B9B' };
 
 // Couleurs fixes du graphique « Répartition des dépenses » (retour du 09/10/2026).
 // Les types de dépense sont des catégories librement nommées : on les reconnaît
@@ -304,6 +336,30 @@ function formaterCompact(v) {
   return String(Math.round(n));
 }
 
+// Anneau : total au centre, valeur de chaque part dans la légende.
+function optionsAnneau(base, formateur) {
+  const format = formateur || ((v) => String(v));
+  return {
+    ...base,
+    legend: {
+      position: 'bottom',
+      formatter: (nom, opts) => `${nom} · ${format(opts.w.globals.series[opts.seriesIndex])}`,
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '66%',
+          labels: {
+            show: true,
+            value: { formatter: (v) => format(Number(v)) },
+            total: { show: true, label: 'Total', formatter: (w) => format(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) },
+          },
+        },
+      },
+    },
+  };
+}
+
 // Couleurs fixes du graphique « Répartition des livraisons » (retour du 08/10/2026).
 const COULEURS_STATUT_LIVRAISON = {
   Livree: '#4C8064', // vert
@@ -326,6 +382,7 @@ function videEvolution() {
 
 export default {
   name: 'Dashboard',
+  components: { Sparkline },
   data() {
     return {
       chargement: false,
@@ -340,6 +397,8 @@ export default {
       evolutionCA: videEvolution(),
       repartitionLivraison: [],
       repartitionCanal: [],
+      COULEURS,
+      premierChargement: true,
       nouveauxClients: { total: 0, comparaison: null, points: [] },
       rentabilitePub: { publicite: 0, ca: 0, nombre_commandes: 0, cout_par_commande: null, retour_sur_pub: null, comparaison: null, devise: null },
       analyseCaPubDepenses: videEvolution(),
@@ -351,6 +410,32 @@ export default {
     ...mapGetters('paysContexte', ['estVueGlobale', 'paysActif']),
     deviseSymbole() {
       return this.paysActif?.devise_locale_id?.symbole || '';
+    },
+    valeursCA() {
+      return (this.evolutionCA.points || []).map((p) => p.ca);
+    },
+    valeursCommandes() {
+      return (this.evolutionCA.points || []).map((p) => p.nombre_commandes);
+    },
+    valeursClients() {
+      return (this.nouveauxClients.points || []).map((p) => p.nombre);
+    },
+    valeursPublicite() {
+      return (this.analyseCaPubDepenses.points || []).map((p) => p.publicite);
+    },
+    totalCommandes() {
+      return ((this.comparaison && this.comparaison.pays) || []).reduce((somme, p) => somme + Number(p.nombre_commandes || 0), 0);
+    },
+    deltaCommandes() {
+      const precedent = this.kpisData && this.kpisData.comparaison ? this.kpisData.comparaison.nombre_commandes : null;
+      if (!precedent) return '';
+      const variation = ((this.kpisData.nombre_commandes - precedent) / precedent) * 100;
+      return `${variation >= 0 ? '+' : ''}${variation.toFixed(1)} %`;
+    },
+    classeDeltaCommandes() {
+      const precedent = this.kpisData && this.kpisData.comparaison ? this.kpisData.comparaison.nombre_commandes : null;
+      if (precedent === null || precedent === undefined) return '';
+      return this.kpisData.nombre_commandes >= precedent ? 'is-hausse' : 'is-baisse';
     },
     symboleRentabilite() {
       return this.estVueGlobale ? this.rentabilitePub.devise || '' : this.deviseSymbole;
@@ -386,15 +471,43 @@ export default {
       };
     },
     serieEvolutionCA() {
-      return [{ name: 'CA', data: this.evolutionCA.points.map((p) => p.ca) }];
+      const series = [{ name: 'Période en cours', data: this.evolutionCA.points.map((p) => p.ca) }];
+      const precedent = this.evolutionCA.comparaison;
+      if (precedent && precedent.some((p) => p.ca > 0)) {
+        series.push({ name: 'Période précédente', data: precedent.map((p) => p.ca) });
+      }
+      return series;
     },
     optionsEvolutionCA() {
+      const points = this.evolutionCA.points;
+      const avecPrecedent = this.serieEvolutionCA.length > 1;
+      const symbole = this.deviseSymbole;
+      let meilleur = null;
+      points.forEach((p) => { if (p.ca > 0 && (!meilleur || p.ca > meilleur.ca)) meilleur = p; });
       return {
         chart: { toolbar: { show: false } },
-        colors: ['#CEA77B'],
-        stroke: { curve: 'smooth', width: 3 },
-        xaxis: { categories: this.evolutionCA.points.map((p) => p.periode) },
+        colors: avecPrecedent ? [COULEURS.ca, COULEURS.precedent] : [COULEURS.ca],
+        stroke: { curve: 'smooth', width: avecPrecedent ? [3, 2] : 3, dashArray: avecPrecedent ? [0, 5] : 0 },
+        xaxis: { categories: points.map((p) => p.periode), tickAmount: Math.min(points.length - 1, 10), labels: { rotate: -45, hideOverlappingLabels: true } },
+        yaxis: { min: 0, labels: { formatter: (v) => formaterCompact(v) } },
         dataLabels: { enabled: false },
+        legend: { show: avecPrecedent, position: 'top' },
+        tooltip: { shared: true, y: { formatter: (v) => formaterMontant(v, symbole) } },
+        annotations: meilleur
+          ? {
+            points: [{
+              x: meilleur.periode,
+              y: meilleur.ca,
+              marker: { size: 5, fillColor: COULEURS.commandes, strokeColor: '#fff', strokeWidth: 2 },
+              label: {
+                text: `Meilleur jour · ${formaterCompact(meilleur.ca)}`,
+                offsetY: -6,
+                borderColor: COULEURS.commandes,
+                style: { background: COULEURS.commandes, color: '#fff', fontSize: '10px', padding: { left: 6, right: 6, top: 2, bottom: 2 } },
+              },
+            }],
+          }
+          : {},
       };
     },
     serieRepartitionLivraison() {
@@ -402,34 +515,37 @@ export default {
     },
     optionsRepartitionLivraison() {
       const libelles = this.$i18n.messages.fr.statuts.livraison;
-      return {
+      return optionsAnneau({
         labels: this.repartitionLivraison.map((r) => libelles[r.statut] || r.statut),
         // Une couleur par statut, fixe : attribuées par position elles se
         // décalaient dès qu'un statut était absent pour le pays choisi.
         colors: this.repartitionLivraison.map((r) => COULEURS_STATUT_LIVRAISON[r.statut] || '#9B9B9B'),
-        legend: { position: 'bottom' },
-      };
+      });
     },
     serieRepartitionDepenses() {
       return this.repartitionDepenses.map((r) => r.montant);
     },
     optionsRepartitionDepenses() {
+      const symbole = this.deviseSymbole;
       return {
-        labels: this.repartitionDepenses.map((r) => r.type),
-        colors: this.repartitionDepenses.map((r) => couleurDepense(r.type)),
-        legend: { position: 'bottom' },
-        tooltip: { y: { formatter: (v) => formaterMontant(v, this.deviseSymbole) } },
+        ...optionsAnneau(
+          {
+            labels: this.repartitionDepenses.map((r) => r.type),
+            colors: this.repartitionDepenses.map((r) => couleurDepense(r.type)),
+          },
+          (v) => formaterMontant(v, symbole),
+        ),
+        tooltip: { y: { formatter: (v) => formaterMontant(v, symbole) } },
       };
     },
     serieRepartitionCanal() {
       return this.repartitionCanal.map((r) => r.nombre);
     },
     optionsRepartitionCanal() {
-      return {
-        labels: this.repartitionCanal.map((r) => r.canal),
+      return optionsAnneau({
+        labels: this.repartitionCanal.map((r) => r.canal || 'Non renseigné'),
         colors: ['#CEA77B', '#4C8064'],
-        legend: { position: 'bottom' },
-      };
+      });
     },
     // Nombre de commandes reçues par période : même source et mêmes statuts que
     // le CA (évolution du CA), donc cohérent avec les cartes du haut. Le total
@@ -604,6 +720,7 @@ export default {
         this.$store.dispatch('notifications/erreur', 'Impossible de charger le dashboard.');
       } finally {
         this.chargement = false;
+        this.premierChargement = false;
       }
     },
   },
@@ -637,6 +754,15 @@ export default {
   font-size: 1.1rem;
   margin: 28px 0 12px;
 }
+.sanaa-grid--principaux {
+  grid-template-columns: repeat(3, 1fr);
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+.sanaa-grid--secondaires {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: 12px;
+}
+.squelette-dashboard .sanaa-grid--charts { margin-top: 20px; }
 .sanaa-grid--charts {
   grid-template-columns: 1fr 1fr;
   margin-top: 20px;
@@ -650,11 +776,5 @@ export default {
   flex-direction: column;
   gap: 10px;
   li { color: var(--sanaa-warning); font-size: 0.9rem; }
-}
-.sanaa-kpi-delta {
-  font-size: 0.75rem;
-  font-weight: 600;
-  &.is-hausse { color: var(--sanaa-success); }
-  &.is-baisse { color: var(--sanaa-danger); }
 }
 </style>

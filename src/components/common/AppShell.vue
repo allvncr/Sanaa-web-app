@@ -61,6 +61,7 @@
           </span>
           <el-dropdown-menu slot="dropdown">
             <el-dropdown-item disabled>{{ utilisateur ? utilisateur.role.nom : '' }}</el-dropdown-item>
+            <el-dropdown-item command="theme" :icon="themeSombre ? 'el-icon-sunny' : 'el-icon-moon'">{{ themeSombre ? 'Mode clair' : 'Mode sombre' }}</el-dropdown-item>
             <el-dropdown-item command="parametres" icon="el-icon-setting">Paramètres</el-dropdown-item>
             <el-dropdown-item command="deconnexion" icon="el-icon-switch-button" divided>
               Déconnexion
@@ -78,12 +79,14 @@
 
 <script>
 import { mapState, mapGetters } from 'vuex';
+import { themeActuel, basculerTheme } from '@/utils/theme';
 
 export default {
   name: 'AppShell',
   data() {
     return {
       sidebarReduit: false,
+      themeSombre: themeActuel() === 'dark',
       sidebarOuvertMobile: false,
       itemsMenu: [
         { name: 'dashboard', label: 'Dashboard', icone: 'el-icon-data-line', permission: 'dashboard:voir_pays' },
@@ -125,6 +128,8 @@ export default {
     onCommandeUtilisateur(commande) {
       if (commande === 'deconnexion') {
         this.$store.dispatch('auth/deconnexion').then(() => this.$router.push({ name: 'connexion' }));
+      } else if (commande === 'theme') {
+        this.themeSombre = basculerTheme() === 'dark';
       } else if (commande === 'parametres') {
         this.$router.push({ name: 'parametres' });
       }

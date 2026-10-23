@@ -8,6 +8,9 @@
         <p class="app__date">{{ dateLongue }}</p>
       </div>
       <div class="app__actions">
+        <button type="button" class="icone-btn" :class="{ 'is-actif': contraste }" aria-label="Contraste élevé (plein soleil)" :aria-pressed="String(contraste)" @click="changerContraste">
+          <i class="el-icon-sunny" />
+        </button>
         <button type="button" class="icone-btn" :class="{ 'is-tourne': chargement }" aria-label="Actualiser" @click="charger">
           <i class="el-icon-refresh" />
         </button>
@@ -281,7 +284,7 @@
 
         <footer v-if="!estLivree(active)" class="feuille__pied">
           <template v-if="!modeProbleme">
-            <button type="button" class="btn btn--contour" @click="modeProbleme = true">Problème</button>
+            <button type="button" class="btn btn--alerte" @click="modeProbleme = true"><i class="el-icon-warning-outline" /> Problème</button>
             <button type="button" class="btn btn--ok" :disabled="enCours" @click="confirmerLivraison">
               <i :class="enCours ? 'el-icon-loading' : 'el-icon-check'" />
               Confirmer la livraison
@@ -304,6 +307,7 @@
 import { mapState } from 'vuex';
 import livraisonsApi from '@/services/livraisons.api';
 import { formaterMontant } from '@/utils/format';
+import { contrasteActif, basculerContraste } from '@/utils/theme';
 
 const pad = (n) => String(n).padStart(2, '0');
 const cleJour = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -323,6 +327,7 @@ export default {
   name: 'LivraisonMobile',
   data() {
     return {
+      contraste: contrasteActif(),
       aujourdhui: cleJour(new Date()),
       toutes: [],
       chargement: false,
@@ -480,6 +485,9 @@ export default {
     clearInterval(this.minuterie);
   },
   methods: {
+    changerContraste() {
+      this.contraste = basculerContraste();
+    },
     formaterMontant,
     estLivree(l) {
       return !!(l.commande && l.commande.statut_livraison === 'Livree');
@@ -590,6 +598,7 @@ export default {
         });
         this.retourTactile();
         this.$store.dispatch('notifications/succes', `${this.active.commande.numero} marquée livrée.`);
+        if (navigator.vibrate) navigator.vibrate(40); // retour tactile : confirmation sans regarder l'écran
         this.fermer();
         await this.charger();
       } catch (err) {
@@ -666,6 +675,7 @@ $barre-onglets: 64px;
   &:active { transform: scale(0.94); }
   &.is-tourne i { animation: tourne 0.9s linear infinite; }
   &--clair { background: rgba(255, 255, 255, 0.18); border-color: transparent; color: #fff; }
+  &.is-actif { background: var(--sanaa-accent-2-dark); border-color: var(--sanaa-accent-2-dark); color: #fff; }
 }
 @keyframes tourne { to { transform: rotate(360deg); } }
 
@@ -760,13 +770,13 @@ $barre-onglets: 64px;
 .carte__client--supprime { color: var(--sanaa-text-muted); font-weight: 400; }
 .carte__adresse { font-size: 0.85rem; color: var(--sanaa-text-muted); margin-top: 3px !important; }
 .carte__bas { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
-.carte__raccourcis { display: flex; gap: 8px; }
+.carte__raccourcis { display: flex; gap: 12px; }
 
 .montant { font-size: 0.85rem; &--du strong { font-size: 1.1rem; color: var(--sanaa-danger, #c0392b); } &--regle { color: var(--sanaa-success, #4caf50); font-weight: 600; } }
 
 .raccourci {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -952,11 +962,11 @@ $barre-onglets: 64px;
 
 .btn {
   flex: 1;
-  height: 54px;
-  border-radius: 16px;
+  height: 62px;
+  border-radius: 18px;
   border: none;
   font: inherit;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -967,6 +977,7 @@ $barre-onglets: 64px;
   &--ok { flex: 2; background: var(--sanaa-success, #4caf50); color: #fff; }
   &--ko { flex: 2; background: var(--sanaa-danger, #c0392b); color: #fff; }
   &--contour { background: var(--sanaa-surface); border: 2px solid var(--sanaa-border); color: var(--sanaa-text-muted); }
+  &--alerte { background: var(--sanaa-surface); border: 2px solid var(--sanaa-danger, #c0392b); color: var(--sanaa-danger, #c0392b); }
 }
 
 // ---------- transition
