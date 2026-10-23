@@ -61,6 +61,12 @@ const routes = [
         meta: { permission: 'commandes:voir' },
       },
       {
+        path: 'relances',
+        name: 'relances',
+        component: () => import('@/views/Relances.vue'),
+        meta: { permission: 'clients:voir' },
+      },
+      {
         path: 'livraisons',
         name: 'livraisons',
         component: () => import('@/views/Livraisons.vue'),

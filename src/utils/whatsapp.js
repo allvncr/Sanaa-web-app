@@ -142,3 +142,44 @@ export function lienWhatsApp(commande, pays, options = {}) {
   const texte = messageCommande(commande, { lien: lienSuivi(commande.numero), devise, jourLivraison: options.jourLivraison, fraisLivraison });
   return `https://wa.me/${numero}?text=${encodeURIComponent(texte)}`;
 }
+
+/**
+ * Messages de relance (retour du 23/10/2026), même ton que les messages de
+ * suivi. `item` vient de /relances : { nom, numero, montant }. Aucune offre ni
+ * promotion n'est inventée : la relance de fidélisation reste une prise de
+ * nouvelles.
+ */
+export function messageRelance(type, { nom, numero, montant = 0 }, { devise = '' } = {}) {
+  const prenom = nom ? String(nom).trim().split(/\s+/)[0] : '';
+  const salut = prenom ? `Bonjour ${prenom} 😊` : 'Bonjour 😊';
+  const pied = numero ? `Commande ${numero}` : '';
+  const assembler = (...blocs) => blocs.filter(Boolean).join('\n\n');
+  if (type === 'reste_a_payer') {
+    return assembler(
+      salut,
+      `Nous espérons que votre bijou 💎 vous plaît ❤️\nIl reste un solde de ${formaterMontant(montant, devise)} à régler sur votre commande. Pourriez-vous nous le régler dès que possible ? Merci beaucoup 🙏`,
+      pied,
+    );
+  }
+  if (type === 'avis') {
+    return assembler(
+      salut,
+      'Votre bijou 💎 est arrivé il y a quelques jours : nous espérons qu\'il vous plaît ❤️\nVotre avis compte beaucoup pour nous ! Auriez-vous un petit mot, ou une photo de vous avec votre bijou, à nous partager ? 📸',
+      `Merci pour votre confiance 🙏\n${pied}`.trim(),
+    );
+  }
+  return assembler(
+    salut,
+    'Nous espérons que votre bijou 💎 vous plaît toujours ❤️\nNous avons de nouvelles créations à vous faire découvrir : souhaitez-vous que nous vous les présentions ? ✨',
+    'À très vite 🙏\nSANAA',
+  );
+}
+
+/** Lien wa.me d'une relance (null si le numéro du client est inexploitable). */
+export function lienWhatsAppRelance(type, item, pays) {
+  const numero = numeroInternational(item.telephone, indicatifDuPays(pays));
+  if (!numero) return null;
+  const devise = pays && pays.devise_locale_id ? pays.devise_locale_id.symbole || pays.devise_locale_id.code : '';
+  const texte = messageRelance(type, item, { devise });
+  return `https://wa.me/${numero}?text=${encodeURIComponent(texte)}`;
+}

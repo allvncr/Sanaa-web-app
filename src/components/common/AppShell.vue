@@ -92,6 +92,7 @@ export default {
         { name: 'livraisons', label: 'Livraisons', icone: 'el-icon-truck', permission: 'livraisons:voir' },
         { name: 'encaissements', label: 'Encaissements du jour', icone: 'el-icon-wallet', permission: 'paiements:voir' },
         { name: 'clients', label: 'Clients', icone: 'el-icon-user', permission: 'clients:voir' },
+        { name: 'relances', label: 'Relances', icone: 'el-icon-chat-dot-round', permission: 'clients:voir' },
         { name: 'catalogue', label: 'Catalogue global', icone: 'el-icon-goods', permission: 'catalogue:voir' },
         { name: 'prix-par-pays', label: 'Prix par pays', icone: 'el-icon-coin', permission: 'catalogue:voir' },
         { name: 'exports', label: 'Exports', icone: 'el-icon-download', permission: 'exports:generer' },
