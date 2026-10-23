@@ -147,6 +147,27 @@
       </template>
 
       <template v-if="estVueGlobale || kpisData">
+        <h2 class="sanaa-section-title">Rentabilité de la publicité</h2>
+        <div class="sanaa-grid sanaa-grid--kpis">
+          <div class="sanaa-kpi">
+            <span class="sanaa-kpi-label">Dépenses publicité</span>
+            <span class="sanaa-kpi-value">{{ rentabilitePub.publicite | montant(symboleRentabilite) }}</span>
+            <span v-if="deltaRentabilite('publicite')" class="sanaa-kpi-delta is-neutre">{{ deltaRentabilite('publicite') }} {{ libelleComparaison }}</span>
+          </div>
+          <div class="sanaa-kpi">
+            <span class="sanaa-kpi-label">Coût de pub par commande</span>
+            <span class="sanaa-kpi-value">{{ rentabilitePub.cout_par_commande === null ? '—' : formaterMontant(rentabilitePub.cout_par_commande, symboleRentabilite) }}</span>
+            <span class="sanaa-kpi-sub">{{ rentabilitePub.nombre_commandes }} commande{{ rentabilitePub.nombre_commandes > 1 ? 's' : '' }} sur la période</span>
+            <span v-if="deltaRentabilite('cout_par_commande')" class="sanaa-kpi-delta" :class="classeRentabilite('cout_par_commande', true)">{{ deltaRentabilite('cout_par_commande') }} {{ libelleComparaison }}</span>
+          </div>
+          <div class="sanaa-kpi">
+            <span class="sanaa-kpi-label">Retour sur pub</span>
+            <span class="sanaa-kpi-value">{{ rentabilitePub.retour_sur_pub === null ? '—' : `×${String(rentabilitePub.retour_sur_pub).replace('.', ',')}` }}</span>
+            <span class="sanaa-kpi-sub">CA généré pour 1 {{ symboleRentabilite || 'unité' }} de pub</span>
+            <span v-if="deltaRentabilite('retour_sur_pub')" class="sanaa-kpi-delta" :class="classeRentabilite('retour_sur_pub')">{{ deltaRentabilite('retour_sur_pub') }} {{ libelleComparaison }}</span>
+          </div>
+        </div>
+
         <div class="sanaa-grid sanaa-grid--charts">
           <div class="sanaa-card">
             <h3>Évolution du CA</h3>
@@ -320,6 +341,7 @@ export default {
       repartitionLivraison: [],
       repartitionCanal: [],
       nouveauxClients: { total: 0, comparaison: null, points: [] },
+      rentabilitePub: { publicite: 0, ca: 0, nombre_commandes: 0, cout_par_commande: null, retour_sur_pub: null, comparaison: null, devise: null },
       analyseCaPubDepenses: videEvolution(),
       repartitionDepenses: [],
     };
@@ -329,6 +351,9 @@ export default {
     ...mapGetters('paysContexte', ['estVueGlobale', 'paysActif']),
     deviseSymbole() {
       return this.paysActif?.devise_locale_id?.symbole || '';
+    },
+    symboleRentabilite() {
+      return this.estVueGlobale ? this.rentabilitePub.devise || '' : this.deviseSymbole;
     },
     libelleComparaison() {
       return LIBELLES_COMPARAISON[this.periode] || '';
@@ -503,6 +528,22 @@ export default {
       const signe = variation >= 0 ? '+' : '';
       return `${signe}${variation.toFixed(1)} %`;
     },
+    formaterMontant,
+    // Variation par rapport à la période précédente ('' si pas de base de comparaison).
+    deltaRentabilite(champ) {
+      const { comparaison } = this.rentabilitePub;
+      const actuel = this.rentabilitePub[champ];
+      const precedent = comparaison ? comparaison[champ] : null;
+      if (actuel === null || actuel === undefined || !precedent) return '';
+      const variation = ((actuel - precedent) / precedent) * 100;
+      return `${variation >= 0 ? '+' : ''}${variation.toFixed(1)} %`;
+    },
+    classeRentabilite(champ, inverser = false) {
+      const { comparaison } = this.rentabilitePub;
+      if (!comparaison) return '';
+      const positif = (this.rentabilitePub[champ] || 0) >= (comparaison[champ] || 0);
+      return (inverser ? !positif : positif) ? 'is-hausse' : 'is-baisse';
+    },
     classeDelta(champ, inverser = false) {
       if (!this.kpisData?.comparaison) return '';
       const actuel = Number(this.kpisData[champ].montant);
@@ -516,7 +557,7 @@ export default {
       try {
         if (this.estVueGlobale) {
           const communParams = { devise_affichage: this.deviseAffichage, ...params };
-          const [comparaisonRes, perfRes, depensesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes] = await Promise.all([
+          const [comparaisonRes, perfRes, depensesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes, rentabiliteRes] = await Promise.all([
             dashboardApi.comparaisonPays(communParams),
             dashboardApi.performanceProduits(communParams),
             dashboardApi.repartitionDepenses(communParams),
@@ -525,6 +566,7 @@ export default {
             dashboardApi.repartitionCanal(params),
             dashboardApi.nouveauxClients(params),
             dashboardApi.analyseCaPubDepenses(communParams),
+            dashboardApi.rentabilitePub(communParams),
           ]);
           this.comparaison = comparaisonRes.data.data;
           this.performanceProduits = perfRes.data.data;
@@ -534,9 +576,10 @@ export default {
           this.repartitionCanal = canalRes.data.data;
           this.nouveauxClients = clientsRes.data.data;
           this.analyseCaPubDepenses = analyseRes.data.data;
+          this.rentabilitePub = rentabiliteRes.data.data;
         } else {
           const communParams = { pays_id: this.paysActifId, ...params };
-          const [kpisRes, perfRes, depensesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes] = await Promise.all([
+          const [kpisRes, perfRes, depensesRes, evolutionRes, repartitionRes, canalRes, clientsRes, analyseRes, rentabiliteRes] = await Promise.all([
             dashboardApi.kpis(communParams),
             dashboardApi.performanceProduits(communParams),
             dashboardApi.repartitionDepenses(communParams),
@@ -545,6 +588,7 @@ export default {
             dashboardApi.repartitionCanal(communParams),
             dashboardApi.nouveauxClients(communParams),
             dashboardApi.analyseCaPubDepenses(communParams),
+            dashboardApi.rentabilitePub(communParams),
           ]);
           this.kpisData = kpisRes.data.data;
           this.performanceProduits = perfRes.data.data;
@@ -554,6 +598,7 @@ export default {
           this.repartitionCanal = canalRes.data.data;
           this.nouveauxClients = clientsRes.data.data;
           this.analyseCaPubDepenses = analyseRes.data.data;
+          this.rentabilitePub = rentabiliteRes.data.data;
         }
       } catch (err) {
         this.$store.dispatch('notifications/erreur', 'Impossible de charger le dashboard.');
