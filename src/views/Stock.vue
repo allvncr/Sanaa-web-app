@@ -4,7 +4,7 @@
       <div>
         <h1>Stock</h1>
         <p class="sanaa-text-muted entete-sous">
-          Bijoux uniques gardés en stock (non personnalisés). Les ventes ne passent pas par les commandes : on note ici chaque sortie, retour et réapprovisionnement.
+          Bijoux uniques gardés en stock (non personnalisés). Les ventes se saisissent dans « Nouvelle commande » (mode « Bijou en stock ») : la pièce est réservée, sort à la livraison et revient en cas d'échec. Ici : produits, achats, retours et inventaires.
         </p>
       </div>
       <div v-can="'stock:ajuster'" class="entete-actions">
@@ -23,8 +23,9 @@
         <span class="sanaa-kpi-value">{{ resume.articles }}</span>
       </div>
       <div class="sanaa-kpi sanaa-kpi--secondaire">
-        <span class="sanaa-kpi-label">Pièces au total</span>
-        <span class="sanaa-kpi-value">{{ resume.pieces }}</span>
+        <span class="sanaa-kpi-label">Pièces disponibles</span>
+        <span class="sanaa-kpi-value">{{ resume.pieces - resume.reservees }}</span>
+        <span v-if="resume.reservees" class="sanaa-kpi-sub">+ {{ resume.reservees }} réservée{{ resume.reservees > 1 ? 's' : '' }} (commandes en cours)</span>
       </div>
       <div class="sanaa-kpi sanaa-kpi--secondaire" :class="{ 'is-alerte': resume.bas > 0 }">
         <span class="sanaa-kpi-label">Stock bas</span>
@@ -33,6 +34,16 @@
       <div class="sanaa-kpi sanaa-kpi--secondaire" :class="{ 'is-danger': resume.rupture > 0 }">
         <span class="sanaa-kpi-label">En rupture</span>
         <span class="sanaa-kpi-value">{{ resume.rupture }}</span>
+      </div>
+      <div class="sanaa-kpi sanaa-kpi--secondaire">
+        <span class="sanaa-kpi-label">Valeur du stock</span>
+        <span class="sanaa-kpi-value">{{ resume.valeur_stock | montant }}</span>
+        <span class="sanaa-kpi-sub">au coût de revient</span>
+      </div>
+      <div class="sanaa-kpi sanaa-kpi--secondaire">
+        <span class="sanaa-kpi-label">Bénéfice réalisé</span>
+        <span class="sanaa-kpi-value" :class="{ 'qte-moins': Number(resume.benefice) < 0 }">{{ resume.benefice | montant }}</span>
+        <span class="sanaa-kpi-sub">sur les pièces livrées</span>
       </div>
     </div>
 
@@ -56,7 +67,7 @@
     </div>
     <div v-else class="sanaa-card sanaa-table-scroll hide-mobile" v-loading="chargementArticles">
       <el-table :data="articles" stripe :row-class-name="classeLigne">
-        <el-table-column label="Produit" min-width="220">
+        <el-table-column label="Produit" min-width="170">
           <template slot-scope="{ row }">
             <strong>{{ row.nom }}</strong>
             <span v-if="!row.actif" class="archive-tag">archivé</span>
@@ -66,22 +77,34 @@
         <el-table-column v-if="!paysActifId" label="Pays" width="80">
           <template slot-scope="{ row }">{{ row.pays_id && row.pays_id.code }}</template>
         </el-table-column>
+        <el-table-column label="Prix de vente" width="110" align="right">
+          <template slot-scope="{ row }">{{ row.prix_vente | montant }}</template>
+        </el-table-column>
         <el-table-column label="En stock" width="130" align="center">
           <template slot-scope="{ row }">
-            <span class="sanaa-badge-statut" :class="classeStock(row)">{{ row.quantite }}<template v-if="row.statut_stock === 'rupture'"> · rupture</template><template v-else-if="row.statut_stock === 'bas'"> · bas</template></span>
+            <span class="sanaa-badge-statut" :class="classeStock(row)">{{ row.disponible }}<template v-if="row.statut_stock === 'rupture'"> · rupture</template><template v-else-if="row.statut_stock === 'bas'"> · bas</template></span>
+            <div v-if="row.reserve" class="sanaa-text-muted detail-produit">+ {{ row.reserve }} réservée{{ row.reserve > 1 ? 's' : '' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="Alerte à" width="90" align="center">
-          <template slot-scope="{ row }">{{ row.seuil_alerte || '—' }}</template>
+        <el-table-column label="Rentabilité" width="170" align="right">
+          <template slot-scope="{ row }">
+            <template v-if="row.cout_revient !== null">
+              <div>Revient {{ m(row.cout_revient) }}</div>
+              <div class="detail-produit" :class="Number(row.marge_unitaire) < 0 ? 'qte-moins' : 'qte-plus'">marge {{ m(row.marge_unitaire) }} / pièce</div>
+            </template>
+            <span v-else class="sanaa-text-muted">coût non saisi</span>
+          </template>
         </el-table-column>
-        <el-table-column label="Dernier mouvement" min-width="140">
-          <template slot-scope="{ row }">{{ row.dernier_mouvement | dateFr }}</template>
+        <el-table-column label="Vendus" width="140" align="right">
+          <template slot-scope="{ row }">
+            {{ row.vendus }}<div v-if="row.benefice !== null" class="detail-produit" :class="Number(row.benefice) < 0 ? 'qte-moins' : 'qte-plus'">{{ row.benefice | montant }} de bénéfice</div>
+          </template>
         </el-table-column>
-        <el-table-column v-if="$can('stock:ajuster')" label="" min-width="340" align="right">
+        <el-table-column v-if="$can('stock:ajuster')" label="" min-width="300" align="right">
           <template slot-scope="{ row }">
             <template v-if="row.actif">
               <el-button size="mini" icon="el-icon-plus" class="btn-entree" @click="ouvrirMouvement(row, 'entree')">Entrée</el-button>
-              <el-button size="mini" icon="el-icon-minus" class="btn-sortie" :disabled="row.quantite <= 0" @click="ouvrirMouvement(row, 'sortie')">Sortie</el-button>
+              <el-button size="mini" icon="el-icon-minus" class="btn-sortie" :disabled="row.disponible <= 0" @click="ouvrirMouvement(row, 'sortie')">Sortie</el-button>
               <el-button size="mini" icon="el-icon-refresh-left" class="btn-retour" @click="ouvrirMouvement(row, 'retour')">Retour</el-button>
             </template>
             <el-dropdown trigger="click" @command="(c) => actionLigne(c, row)">
@@ -109,12 +132,15 @@
             <strong>{{ a.nom }}</strong><span v-if="!a.actif" class="archive-tag">archivé</span>
             <div class="sanaa-text-muted detail-produit">{{ [a.reference, a.couleur].filter(Boolean).join(' · ') || '—' }}</div>
           </div>
-          <span class="sanaa-badge-statut gros" :class="classeStock(a)">{{ a.quantite }}</span>
+          <span class="sanaa-badge-statut gros" :class="classeStock(a)">{{ a.disponible }}</span>
         </header>
+        <p class="sanaa-text-muted detail-produit carte-article__chiffres">
+          Prix {{ a.prix_vente | montant }}<template v-if="a.reserve"> · {{ a.reserve }} réservée{{ a.reserve > 1 ? 's' : '' }}</template><template v-if="a.marge_unitaire !== null"> · marge {{ a.marge_unitaire | montant }}</template><template v-if="a.vendus"> · {{ a.vendus }} vendu{{ a.vendus > 1 ? 's' : '' }}</template>
+        </p>
         <div v-can="'stock:ajuster'" class="carte-article__actions">
           <template v-if="a.actif">
             <el-button size="small" icon="el-icon-plus" class="btn-entree" @click="ouvrirMouvement(a, 'entree')">Entrée</el-button>
-            <el-button size="small" icon="el-icon-minus" class="btn-sortie" :disabled="a.quantite <= 0" @click="ouvrirMouvement(a, 'sortie')">Sortie</el-button>
+            <el-button size="small" icon="el-icon-minus" class="btn-sortie" :disabled="a.disponible <= 0" @click="ouvrirMouvement(a, 'sortie')">Sortie</el-button>
             <el-button size="small" icon="el-icon-refresh-left" class="btn-retour" @click="ouvrirMouvement(a, 'retour')">Retour</el-button>
           </template>
           <el-button size="small" icon="el-icon-time" @click="actionLigne('historique', a)" />
@@ -155,7 +181,7 @@
         </el-table-column>
         <el-table-column label="Type" width="140">
           <template slot-scope="{ row }">
-            <span class="sanaa-badge-statut" :class="TYPES[row.type] ? TYPES[row.type].classe : ''">{{ TYPES[row.type] ? TYPES[row.type].libelle : row.type }}</span>
+            <span class="sanaa-badge-statut" :class="TYPES[row.type] ? TYPES[row.type].classe : ''">{{ row.auto ? (row.quantite < 0 ? 'Sortie (livraison)' : 'Retour en stock') : (TYPES[row.type] ? TYPES[row.type].libelle : row.type) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="Quantité" width="90" align="right">
@@ -163,13 +189,23 @@
             <strong :class="row.quantite > 0 ? 'qte-plus' : 'qte-moins'">{{ row.quantite > 0 ? '+' : '' }}{{ row.quantite }}</strong>
           </template>
         </el-table-column>
-        <el-table-column prop="commentaire" label="Note" min-width="180" class-name="hide-mobile" />
+        <el-table-column label="Note" min-width="200" class-name="hide-mobile">
+          <template slot-scope="{ row }">
+            <span v-if="row.reference_commande_id && row.reference_commande_id.numero" class="lien-commande" @click="$router.push({ name: 'commande-detail', params: { id: row.reference_commande_id._id } })">{{ row.reference_commande_id.numero }}</span>
+            <span v-if="row.cout_unitaire || row.frais_transport" class="sanaa-text-muted">
+              {{ row.cout_unitaire ? 'achat ' + m(row.cout_unitaire) + ' / pièce' : '' }}{{ row.cout_unitaire && row.frais_transport ? ' · ' : '' }}{{ row.frais_transport ? 'transport ' + m(row.frais_transport) : '' }}
+              <br />
+            </span>
+            {{ row.auto ? '' : row.commentaire }}
+          </template>
+        </el-table-column>
         <el-table-column label="Saisi par" min-width="120" class-name="hide-mobile">
           <template slot-scope="{ row }">{{ row.saisi_par && row.saisi_par.nom ? row.saisi_par.nom : '—' }}</template>
         </el-table-column>
         <el-table-column v-if="$can('stock:ajuster')" label="" width="110" align="center">
           <template slot-scope="{ row }">
             <span v-if="row.annule" class="sanaa-text-muted">annulé</span>
+            <span v-else-if="row.auto" class="sanaa-text-muted" title="Mouvement lié à une commande">auto</span>
             <el-popconfirm v-else title="Annuler ce mouvement ?" confirm-button-text="Annuler le mouvement" cancel-button-text="Garder" @confirm="annuler(row)">
               <el-button slot="reference" type="text" size="small">Annuler</el-button>
             </el-popconfirm>
@@ -181,7 +217,7 @@
     </div>
 
     <!-- Nouveau produit -->
-    <el-dialog title="Nouveau produit en stock" :visible.sync="dialogueProduit" width="480px" :close-on-click-modal="false">
+    <el-dialog title="Nouveau produit en stock" :visible.sync="dialogueProduit" width="520px" :close-on-click-modal="false">
       <el-form :model="formProduit" label-position="top" @submit.native.prevent>
         <el-form-item label="Nom du produit" required>
           <el-input v-model="formProduit.nom" placeholder="Ex : Bracelet Étoile" />
@@ -190,13 +226,20 @@
           <el-form-item label="Couleur / matière"><el-input v-model="formProduit.couleur" placeholder="Ex : Or rose" /></el-form-item>
           <el-form-item label="Référence"><el-input v-model="formProduit.reference" placeholder="Facultatif" /></el-form-item>
         </div>
+        <el-form-item label="Prix de vente (une pièce)" required>
+          <el-input-number v-model="formProduit.prix_vente" :min="0" :precision="0" :controls="false" style="width: 100%" />
+        </el-form-item>
+        <h4 class="titre-achat">Premier achat <span class="sanaa-text-muted">(facultatif)</span></h4>
         <div class="deux-colonnes">
-          <el-form-item label="Quantité en stock au départ"><el-input-number v-model="formProduit.quantite_initiale" :min="0" :precision="0" style="width: 100%" /></el-form-item>
-          <el-form-item label="Alerte stock bas à">
-            <el-input-number v-model="formProduit.seuil_alerte" :min="0" :precision="0" style="width: 100%" />
-          </el-form-item>
+          <el-form-item label="Quantité achetée"><el-input-number v-model="formProduit.quantite_initiale" :min="0" :precision="0" style="width: 100%" /></el-form-item>
+          <el-form-item label="Alerte stock bas à"><el-input-number v-model="formProduit.seuil_alerte" :min="0" :precision="0" style="width: 100%" /></el-form-item>
         </div>
-        <p class="sanaa-text-muted aide">L'alerte « stock bas » s'affiche quand il reste ce nombre de pièces ou moins (0 = pas d'alerte avant la rupture).</p>
+        <div class="deux-colonnes">
+          <el-form-item label="Coût d'achat d'une pièce"><el-input-number v-model="formProduit.cout_unitaire" :min="0" :precision="0" :controls="false" style="width: 100%" /></el-form-item>
+          <el-form-item label="Frais de transport (total)"><el-input-number v-model="formProduit.frais_transport" :min="0" :precision="0" :controls="false" style="width: 100%" /></el-form-item>
+        </div>
+        <p v-if="apercuProduit" class="apercu">{{ apercuProduit }}</p>
+        <p class="sanaa-text-muted aide">Les coûts d'achat et de transport sont ajoutés automatiquement aux dépenses (catégories « Achat de stock » et « Transport de stock ») : ne les saisissez pas une seconde fois dans Dépenses.</p>
       </el-form>
       <span slot="footer">
         <el-button @click="dialogueProduit = false">Annuler</el-button>
@@ -212,7 +255,11 @@
           <el-form-item label="Couleur / matière"><el-input v-model="formEdition.couleur" /></el-form-item>
           <el-form-item label="Référence"><el-input v-model="formEdition.reference" /></el-form-item>
         </div>
-        <el-form-item label="Alerte stock bas à"><el-input-number v-model="formEdition.seuil_alerte" :min="0" :precision="0" /></el-form-item>
+        <div class="deux-colonnes">
+          <el-form-item label="Prix de vente (une pièce)" required><el-input-number v-model="formEdition.prix_vente" :min="0" :precision="0" :controls="false" style="width: 100%" /></el-form-item>
+          <el-form-item label="Alerte stock bas à"><el-input-number v-model="formEdition.seuil_alerte" :min="0" :precision="0" style="width: 100%" /></el-form-item>
+        </div>
+        <p class="sanaa-text-muted aide">Un nouveau prix s'applique aux prochaines commandes ; celles déjà saisies gardent leur prix.</p>
       </el-form>
       <span slot="footer">
         <el-button @click="dialogueEdition = false">Annuler</el-button>
@@ -225,7 +272,7 @@
       <el-form :model="formMouvement" label-position="top" @submit.native.prevent>
         <el-form-item label="Produit" required>
           <el-select v-model="formMouvement.article_id" filterable style="width: 100%" placeholder="Choisir un produit">
-            <el-option v-for="a in articlesActifs" :key="a._id" :value="a._id" :label="`${libelleArticle(a)} — ${a.quantite} en stock`" />
+            <el-option v-for="a in articlesActifs" :key="a._id" :value="a._id" :label="`${libelleArticle(a)} — ${a.disponible} dispo`" />
           </el-select>
         </el-form-item>
         <el-form-item label="Type de mouvement" required>
@@ -240,10 +287,17 @@
         <el-form-item v-else label="Quantité réellement comptée" required>
           <el-input-number v-model="formMouvement.quantite_constatee" :min="0" :precision="0" style="width: 100%" />
         </el-form-item>
+        <div v-if="formMouvement.type === 'entree'" class="deux-colonnes">
+          <el-form-item label="Coût d'achat d'une pièce"><el-input-number v-model="formMouvement.cout_unitaire" :min="0" :precision="0" :controls="false" style="width: 100%" /></el-form-item>
+          <el-form-item label="Frais de transport (total)"><el-input-number v-model="formMouvement.frais_transport" :min="0" :precision="0" :controls="false" style="width: 100%" /></el-form-item>
+        </div>
+        <p v-if="formMouvement.type === 'entree'" class="sanaa-text-muted aide" style="margin-top: -6px">Ces coûts alimentent le coût de revient et sont ajoutés aux dépenses (ne pas les ressaisir dans Dépenses).</p>
         <p v-if="articleChoisi" class="apercu">
-          Stock actuel : <strong>{{ articleChoisi.quantite }}</strong>
+          {{ formMouvement.type === 'ajustement' ? 'Stock physique actuel' : 'Disponible actuellement' }} :
+          <strong>{{ formMouvement.type === 'ajustement' ? articleChoisi.quantite : articleChoisi.disponible }}</strong>
           → après : <strong :class="{ 'qte-moins': stockApres < 0 }">{{ stockApres }}</strong>
           <span v-if="stockApres < 0" class="qte-moins"> (stock insuffisant)</span>
+          <span v-if="articleChoisi.reserve && formMouvement.type !== 'ajustement'" class="sanaa-text-muted"> · {{ articleChoisi.reserve }} réservée(s) par des commandes</span>
         </p>
         <div class="deux-colonnes">
           <el-form-item label="Date"><el-date-picker v-model="formMouvement.date" type="date" value-format="yyyy-MM-dd" :clearable="false" style="width: 100%" /></el-form-item>
@@ -264,6 +318,7 @@
 import { mapState } from 'vuex';
 import stockApi from '@/services/stock.api';
 import PaginationBarre from '@/components/common/PaginationBarre.vue';
+import { formaterMontant } from '@/utils/format';
 
 const aujourdhui = () => {
   const d = new Date();
@@ -279,12 +334,12 @@ const TYPES = {
     aide: 'Des bijoux arrivent en stock : nouvelle commande fournisseur, réassort.', exemple: 'Ex : commande fournisseur du 25/10',
   },
   sortie: {
-    libelle: 'Sortie (vente)', court: 'Sortie (vente)', classe: 'is-retour-echec',
-    aide: 'Un bijou part en livraison ou est vendu : retiré du stock.', exemple: 'Ex : commande Shopify C8052, livré le jour même',
+    libelle: 'Sortie', court: 'Sortie / correction', classe: 'is-retour-echec',
+    aide: 'Les ventes passent par « Nouvelle commande ». Utilisez ceci pour corriger une erreur de stock, une casse, une perte ou une vente faite hors site.', exemple: 'Ex : bijou cassé, vente en boutique',
   },
   retour: {
     libelle: 'Retour', court: 'Retour', classe: 'is-en-fabrication',
-    aide: 'Un bijou revient en stock (non livré, client refusé…) : remis dans le stock.', exemple: 'Ex : client injoignable, bijou rapporté',
+    aide: 'Un bijou déjà livré est rapporté par le client : remis en stock. (Une livraison échouée libère déjà le bijou toute seule.)', exemple: 'Ex : client a changé d\'avis, bijou rapporté',
   },
   ajustement: {
     libelle: 'Inventaire', court: 'Inventaire', classe: 'is-a-expedier',
@@ -311,11 +366,11 @@ export default {
       pagination: { page: 1, limite: 20, total: 0 },
       filtres: { article_id: '', type: '', plage: [], annules: false },
       dialogueProduit: false,
-      formProduit: { nom: '', couleur: '', reference: '', quantite_initiale: 1, seuil_alerte: 2 },
+      formProduit: { nom: '', couleur: '', reference: '', prix_vente: undefined, quantite_initiale: 1, seuil_alerte: 2, cout_unitaire: undefined, frais_transport: undefined },
       dialogueEdition: false,
-      formEdition: { id: '', nom: '', couleur: '', reference: '', seuil_alerte: 0 },
+      formEdition: { id: '', nom: '', couleur: '', reference: '', prix_vente: 0, seuil_alerte: 0 },
       dialogueMouvement: false,
-      formMouvement: { article_id: '', type: 'sortie', quantite: 1, quantite_constatee: 0, date: aujourdhui(), commentaire: '' },
+      formMouvement: { article_id: '', type: 'entree', quantite: 1, quantite_constatee: 0, cout_unitaire: undefined, frais_transport: undefined, date: aujourdhui(), commentaire: '' },
     };
   },
   computed: {
@@ -332,7 +387,18 @@ export default {
       const f = this.formMouvement;
       if (f.type === 'ajustement') return Number(f.quantite_constatee) || 0;
       const q = Number(f.quantite) || 0;
-      return f.type === 'sortie' ? a.quantite - q : a.quantite + q;
+      return f.type === 'sortie' ? a.disponible - q : a.disponible + q;
+    },
+    // Coût de revient et marge estimés d'après le premier achat saisi.
+    apercuProduit() {
+      const f = this.formProduit;
+      const q = Number(f.quantite_initiale) || 0;
+      if (!q || (!f.cout_unitaire && !f.frais_transport)) return '';
+      const revient = ((Number(f.cout_unitaire) || 0) * q + (Number(f.frais_transport) || 0)) / q;
+      const total = (Number(f.cout_unitaire) || 0) * q + (Number(f.frais_transport) || 0);
+      const marge = f.prix_vente ? Number(f.prix_vente) - revient : null;
+      const fm = (v) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v);
+      return `Coût de revient : ${fm(revient)} par pièce (${fm(total)} au total)${marge === null ? '' : ` · marge : ${fm(marge)} par pièce`}.`;
     },
   },
   watch: {
@@ -348,6 +414,7 @@ export default {
     clearTimeout(this.minuterie);
   },
   methods: {
+    m: formaterMontant,
     libelleArticle(a) {
       return [a.nom, a.couleur].filter(Boolean).join(' · ');
     },
@@ -425,12 +492,16 @@ export default {
       return (err.response && err.response.data && err.response.data.error && err.response.data.error.message) || defaut;
     },
     ouvrirNouveauProduit() {
-      this.formProduit = { nom: '', couleur: '', reference: '', quantite_initiale: 1, seuil_alerte: 2 };
+      this.formProduit = { nom: '', couleur: '', reference: '', prix_vente: undefined, quantite_initiale: 1, seuil_alerte: 2, cout_unitaire: undefined, frais_transport: undefined };
       this.dialogueProduit = true;
     },
     async creerProduit() {
       if (!this.formProduit.nom.trim()) {
         this.$store.dispatch('notifications/erreur', 'Indiquez le nom du produit.');
+        return;
+      }
+      if (!this.formProduit.prix_vente || this.formProduit.prix_vente <= 0) {
+        this.$store.dispatch('notifications/erreur', 'Indiquez le prix de vente du produit.');
         return;
       }
       this.enregistrement = true;
@@ -449,9 +520,11 @@ export default {
       const choisi = article && article._id ? article : null;
       this.formMouvement = {
         article_id: choisi ? choisi._id : (this.articlesActifs.length === 1 ? this.articlesActifs[0]._id : ''),
-        type: type || 'sortie',
+        type: type || 'entree',
         quantite: 1,
         quantite_constatee: choisi ? choisi.quantite : 0,
+        cout_unitaire: undefined,
+        frais_transport: undefined,
         date: aujourdhui(),
         commentaire: '',
       };
@@ -466,6 +539,8 @@ export default {
           type: f.type,
           quantite: f.type === 'ajustement' ? undefined : f.quantite,
           quantite_constatee: f.type === 'ajustement' ? f.quantite_constatee : undefined,
+          cout_unitaire: f.type === 'entree' ? f.cout_unitaire : undefined,
+          frais_transport: f.type === 'entree' ? f.frais_transport : undefined,
           date: f.date,
           commentaire: f.commentaire || undefined,
         });
@@ -500,7 +575,7 @@ export default {
         this.ouvrirMouvement(article, 'ajustement');
       } else if (commande === 'modifier') {
         this.formEdition = {
-          id: article._id, nom: article.nom, couleur: article.couleur || '', reference: article.reference || '', seuil_alerte: article.seuil_alerte || 0,
+          id: article._id, nom: article.nom, couleur: article.couleur || '', reference: article.reference || '', prix_vente: Number(article.prix_vente) || 0, seuil_alerte: article.seuil_alerte || 0,
         };
         this.dialogueEdition = true;
       } else if (commande === 'archiver') {
@@ -509,13 +584,13 @@ export default {
     },
     async sauvegarderEdition() {
       const f = this.formEdition;
-      if (!f.nom.trim()) {
-        this.$store.dispatch('notifications/erreur', 'Indiquez le nom du produit.');
+      if (!f.nom.trim() || !f.prix_vente || f.prix_vente <= 0) {
+        this.$store.dispatch('notifications/erreur', 'Indiquez le nom et le prix de vente du produit.');
         return;
       }
       this.enregistrement = true;
       try {
-        await stockApi.modifierArticle(f.id, { nom: f.nom, couleur: f.couleur, reference: f.reference, seuil_alerte: f.seuil_alerte });
+        await stockApi.modifierArticle(f.id, { nom: f.nom, couleur: f.couleur, reference: f.reference, prix_vente: f.prix_vente, seuil_alerte: f.seuil_alerte });
         this.$store.dispatch('notifications/succes', 'Produit modifié.');
         this.dialogueEdition = false;
         this.chargerArticles();
@@ -551,7 +626,7 @@ export default {
 .entete-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .resume {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
   @media (max-width: 700px) { grid-template-columns: repeat(2, 1fr); }
@@ -573,6 +648,9 @@ export default {
 .apercu { margin: 0 0 14px; font-size: 0.9rem; }
 .deux-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; @media (max-width: 520px) { grid-template-columns: 1fr; } }
 .gros { font-size: 1rem; padding: 4px 14px; }
+.titre-achat { margin: 4px 0 10px; font-size: 0.95rem; }
+.lien-commande { color: var(--sanaa-accent-2-dark); font-weight: 600; cursor: pointer; margin-right: 8px; &:hover { text-decoration: underline; } }
+.carte-article__chiffres { margin: 6px 0 0; }
 .carte-article {
   margin-bottom: 10px;
   padding: 12px 14px;

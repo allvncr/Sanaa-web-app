@@ -56,6 +56,15 @@
         </div>
 
         <div class="sanaa-card" style="margin-bottom:16px">
+          <div class="mode-commande">
+            <el-radio-group v-model="form.mode" size="small" @change="changerMode">
+              <el-radio-button label="personnalise">Bijou personnalisé</el-radio-button>
+              <el-radio-button label="stock">Bijou en stock</el-radio-button>
+            </el-radio-group>
+            <span v-if="form.mode === 'stock'" class="sanaa-text-muted mode-commande__aide">
+              Bijou unique déjà en stock, livré le jour même : prix automatique, la pièce est réservée puis sort du stock à la livraison.
+            </span>
+          </div>
           <div class="sanaa-toolbar" style="justify-content: space-between;">
             <h3 style="margin:0">Lignes de commande</h3>
             <div>
@@ -78,6 +87,31 @@
             </div>
             <el-collapse-transition>
             <div v-show="!ligne.replie" class="ligne-commande__corps">
+            <template v-if="form.mode === 'stock'">
+              <div class="sanaa-grid sanaa-grid--ligne">
+                <el-form-item label="Bijou en stock">
+                  <el-select v-model="ligne.article_id" filterable placeholder="Choisir dans le stock" style="width:100%" @change="() => onChangeArticle(ligne)">
+                    <el-option
+                      v-for="a in articlesStock"
+                      :key="a._id"
+                      :value="a._id"
+                      :label="`${libelleArticle(a)} — ${a.disponible} dispo`"
+                      :disabled="a.disponible <= 0"
+                    />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="Quantité">
+                  <el-input-number v-model="ligne.quantite" :min="1" :max="maxArticle(ligne)" style="width:100%" @change="() => calculerLigneStock(ligne)" />
+                </el-form-item>
+                <el-form-item label="Prix unitaire">
+                  <el-input :value="ligne.prixUnitaire ? formaterMontant(ligne.prixUnitaire) : '—'" disabled />
+                </el-form-item>
+              </div>
+              <p v-if="articleDeLigne(ligne)" class="sanaa-text-muted aide-stock">
+                {{ articleDeLigne(ligne).disponible }} pièce{{ articleDeLigne(ligne).disponible > 1 ? 's' : '' }} disponible{{ articleDeLigne(ligne).disponible > 1 ? 's' : '' }}<template v-if="articleDeLigne(ligne).reserve"> ({{ articleDeLigne(ligne).reserve }} déjà réservée{{ articleDeLigne(ligne).reserve > 1 ? 's' : '' }} par d'autres commandes)</template>.
+              </p>
+            </template>
+            <template v-else>
             <div class="sanaa-grid sanaa-grid--ligne">
               <el-form-item label="Produit">
                 <el-select v-model="ligne.produit_id" filterable placeholder="Produit" style="width:100%" @change="() => onChangeProduit(ligne)">
@@ -124,6 +158,8 @@
                 </el-button>
               </div>
             </el-form-item>
+
+            </template>
 
             <div class="ligne-commande__pied">
               <span>Sous-total : <strong>{{ ligne.sousTotal | montant }}</strong></span>
@@ -192,11 +228,13 @@
 import { mapState } from 'vuex';
 import catalogueApi from '@/services/catalogue.api';
 import commandesApi from '@/services/commandes.api';
+import stockApi from '@/services/stock.api';
 import { formaterMontant } from '@/utils/format';
 
 function ligneVide() {
   return {
     cle: Math.random().toString(36).slice(2),
+    article_id: '',
     produit_id: '', variante_id: '', couleur_choisie: '', detail_variante: '',
     personnalisation: [{ texte: '', police: '', position: 0 }],
     quantite: 1, prixUnitaire: 0, sousTotal: 0, replie: false,
@@ -215,6 +253,7 @@ function policePourLongueur(longueur) {
 function commandeVide(pays_id) {
   return {
     pays_id,
+    mode: 'personnalise',
     client: { nom: '', telephone_whatsapp: '', adresse: '' },
     canal_vente: 'Site web',
     lignes: [],
@@ -235,6 +274,7 @@ export default {
       enregistrement: false,
       erreurMoyen: '',
       blocPaiementOuvert: false,
+      articlesStock: [],
     };
   },
   computed: {
@@ -278,6 +318,45 @@ export default {
     onChangePays() {
       const pays = this.paysContexte.liste.find((p) => p._id === this.form.pays_id);
       this.moyensPaiement = pays ? pays.moyens_paiement.filter((m) => m.actif) : [];
+      if (this.form.mode === 'stock') this.chargerArticlesStock();
+    },
+    // --- Bijoux en stock : lignes choisies dans le stock, prix automatique.
+    async chargerArticlesStock() {
+      if (!this.form.pays_id) return;
+      try {
+        const { data } = await stockApi.articles({ pays_id: this.form.pays_id });
+        this.articlesStock = data.data.items;
+      } catch (e) {
+        this.articlesStock = [];
+        this.$store.dispatch('notifications/erreur', 'Impossible de charger le stock.');
+      }
+    },
+    changerMode() {
+      this.form.lignes = [];
+      this.ajouterLigne();
+      if (this.form.mode === 'stock') this.chargerArticlesStock();
+    },
+    libelleArticle(a) {
+      return [a.nom, a.couleur].filter(Boolean).join(' · ');
+    },
+    articleDeLigne(ligne) {
+      return this.articlesStock.find((a) => a._id === ligne.article_id) || null;
+    },
+    maxArticle(ligne) {
+      const a = this.articleDeLigne(ligne);
+      return a ? Math.max(1, a.disponible) : undefined;
+    },
+    onChangeArticle(ligne) {
+      const a = this.articleDeLigne(ligne);
+      ligne.produit_id = a ? a.produit_id : '';
+      ligne.variante_id = a ? a.variante_id : '';
+      ligne.couleur_choisie = a ? a.couleur || '' : '';
+      ligne.prixUnitaire = a ? Number(a.prix_vente) : 0;
+      if (a && ligne.quantite > a.disponible) ligne.quantite = Math.max(1, a.disponible);
+      this.calculerLigneStock(ligne);
+    },
+    calculerLigneStock(ligne) {
+      ligne.sousTotal = (Number(ligne.prixUnitaire) || 0) * (ligne.quantite || 1);
     },
     variantesDisponibles(produitId) {
       const produit = this.produits.find((p) => p._id === produitId);
@@ -288,6 +367,10 @@ export default {
       this.form.lignes.forEach((l) => { l.replie = replier; });
     },
     resumeLigne(ligne) {
+      if (this.form.mode === 'stock') {
+        const a = this.articleDeLigne(ligne);
+        return a ? [this.libelleArticle(a), ligne.quantite > 1 ? `×${ligne.quantite}` : ''].filter(Boolean).join(' · ') : 'Bijou à choisir';
+      }
       const produit = this.produits.find((p) => p._id === ligne.produit_id);
       if (!produit) return 'Produit à choisir';
       const variante = produit.variantes.find((v) => v._id === ligne.variante_id);
@@ -340,7 +423,11 @@ export default {
         this.$store.dispatch('notifications/erreur', 'Numéro de téléphone du client et au moins une ligne sont requis.');
         return;
       }
-      const ligneSansModele = this.form.lignes.find((l) => this.estFleurDuMois(l) && !String(l.detail_variante || '').trim());
+      if (this.form.mode === 'stock' && this.form.lignes.some((l) => !l.article_id)) {
+        this.$store.dispatch('notifications/erreur', 'Choisissez le bijou en stock pour chaque ligne.');
+        return;
+      }
+      const ligneSansModele = this.form.mode === 'stock' ? null : this.form.lignes.find((l) => this.estFleurDuMois(l) && !String(l.detail_variante || '').trim());
       if (ligneSansModele) {
         this.$store.dispatch('notifications/erreur', 'Précisez le modèle (le mois) pour chaque ligne « Fleur du mois ».');
         return;
@@ -364,8 +451,8 @@ export default {
             produit_id: l.produit_id,
             variante_id: l.variante_id,
             couleur_choisie: l.couleur_choisie,
-            personnalisation: l.personnalisation.filter((p) => p.texte),
-            detail_variante: l.detail_variante || undefined,
+            personnalisation: this.form.mode === 'stock' ? [] : l.personnalisation.filter((p) => p.texte),
+            detail_variante: this.form.mode === 'stock' ? undefined : l.detail_variante || undefined,
             quantite: l.quantite,
           })),
         };
@@ -378,9 +465,12 @@ export default {
         // Retour V0.1 : on reste sur l'écran, pays conservé, prêt pour la
         // commande suivante — c'est l'action la plus répétitive de l'app.
         const paysId = this.form.pays_id;
+        const mode = this.form.mode;
         this.form = commandeVide(paysId);
+        this.form.mode = mode;
         this.blocPaiementOuvert = false;
         this.ajouterLigne();
+        if (mode === 'stock') this.chargerArticlesStock(); // le stock disponible vient de changer
         this.$nextTick(() => this.$refs.telephone && this.$refs.telephone.focus());
       } catch (err) {
         this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Échec de la création');
@@ -405,6 +495,9 @@ export default {
 .pays-verrouille__label { color: var(--sanaa-text-muted); }
 
 .sanaa-card--choix-pays { max-width: 560px; }
+.mode-commande { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
+.mode-commande__aide { font-size: 0.82rem; max-width: 520px; }
+.aide-stock { margin: 0 0 10px; font-size: 0.82rem; }
 .sanaa-card--compteur {
   margin-bottom: 16px;
   color: var(--sanaa-success);

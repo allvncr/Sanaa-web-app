@@ -312,7 +312,8 @@ const COULEURS_DEPENSE = [
   [/facebook|meta\b/, '#3B7DD8'], // bleu
   [/surcout/, '#E8833A'], // orange
   [/confection/, '#4C8064'], // vert
-  [/logistique/, '#E3B83C'], // jaune
+  [/logistique|transport/, '#E3B83C'], // jaune (inclut le transport du stock)
+  [/stock/, '#2E9CA6'], // turquoise : achats de bijoux en stock
   [/salaire/, '#D9C7A8'], // beige
   [/divers/, '#9B9B9B'], // gris
 ];
