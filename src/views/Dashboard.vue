@@ -61,6 +61,17 @@
             <Sparkline :valeurs="valeursCommandes" :couleur="COULEURS.commandes" />
           </div>
         </div>
+        <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--principaux sanaa-grid--deux">
+          <div class="sanaa-kpi sanaa-kpi--principal">
+            <span class="sanaa-kpi-label">Montant perçu consolidé</span>
+            <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.encaissements_convertis | montant }}</span>
+            <span class="sanaa-kpi-sub">avances + paiements à la livraison</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--principal">
+            <span class="sanaa-kpi-label">Dépenses consolidées</span>
+            <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.depenses_converties | montant }}</span>
+          </div>
+        </div>
         <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--secondaires">
           <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Articles vendus</span>
@@ -77,14 +88,6 @@
             <span class="sanaa-kpi-value">{{ nouveauxClients.taux_repeat || 0 }} %</span>
             <span class="sanaa-kpi-sub">{{ nouveauxClients.recurrents || 0 }} client{{ nouveauxClients.recurrents > 1 ? 's' : '' }} déjà venu{{ nouveauxClients.recurrents > 1 ? 's' : '' }} sur {{ nouveauxClients.actifs || 0 }} qui ont commandé</span>
             <span v-if="deltaRepeat" class="sanaa-kpi-delta" :class="classeDeltaRepeat">{{ deltaRepeat }} {{ libelleComparaison }}</span>
-          </div>
-          <div class="sanaa-kpi sanaa-kpi--secondaire">
-            <span class="sanaa-kpi-label">Montant perçu consolidé</span>
-            <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.encaissements_convertis | montant }}</span>
-          </div>
-          <div class="sanaa-kpi sanaa-kpi--secondaire">
-            <span class="sanaa-kpi-label">Dépenses consolidées</span>
-            <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.depenses_converties | montant }}</span>
           </div>
           <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Nouveaux clients</span>
@@ -159,6 +162,26 @@
             <Sparkline :valeurs="valeursCommandes" :couleur="COULEURS.commandes" />
           </div>
         </div>
+        <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--principaux">
+          <div class="sanaa-kpi sanaa-kpi--principal">
+            <span class="sanaa-kpi-label">Montant perçu</span>
+            <span class="sanaa-kpi-value">{{ kpisData.encaissements.montant | montant(deviseSymbole) }}</span>
+            <span class="sanaa-kpi-sub">avances + paiements à la livraison</span>
+            <span v-if="delta('encaissements')" class="sanaa-kpi-delta" :class="classeDelta('encaissements')">{{ delta('encaissements') }} {{ libelleComparaison }}</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--principal">
+            <span class="sanaa-kpi-label">Reste à percevoir</span>
+            <span class="sanaa-kpi-value">{{ kpisData.reste_a_recevoir.montant | montant(deviseSymbole) }}</span>
+            <span class="sanaa-kpi-sub">encore dû sur les commandes de la période</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--principal">
+            <span class="sanaa-kpi-label">Dépenses</span>
+            <span class="sanaa-kpi-value">{{ kpisData.depenses.montant | montant(deviseSymbole) }}</span>
+            <span v-if="Number(kpisData.surcouts_livraison) !== 0" class="sanaa-kpi-sub">dont {{ kpisData.surcouts_livraison | montant(deviseSymbole) }} de surcoût de livraison</span>
+            <span v-else class="sanaa-kpi-sub">publicité, confection, logistique…</span>
+            <span v-if="delta('depenses')" class="sanaa-kpi-delta" :class="classeDelta('depenses', true)">{{ delta('depenses') }} {{ libelleComparaison }}</span>
+          </div>
+        </div>
         <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--secondaires">
           <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Articles vendus</span>
@@ -184,22 +207,6 @@
             <span class="sanaa-kpi-sub">1re commande sur la période</span>
             <span v-if="deltaClients" class="sanaa-kpi-delta" :class="classeDeltaClients">{{ deltaClients }} {{ libelleComparaison }}</span>
             <Sparkline :valeurs="valeursClients" :couleur="COULEURS.clients" />
-          </div>
-          <div class="sanaa-kpi sanaa-kpi--secondaire">
-            <span class="sanaa-kpi-label">Montant perçu</span>
-            <span class="sanaa-kpi-value">{{ kpisData.encaissements.montant | montant(deviseSymbole) }}</span>
-            <span class="sanaa-kpi-sub">avances + paiements à la livraison</span>
-            <span v-if="delta('encaissements')" class="sanaa-kpi-delta" :class="classeDelta('encaissements')">{{ delta('encaissements') }} {{ libelleComparaison }}</span>
-          </div>
-          <div class="sanaa-kpi sanaa-kpi--secondaire">
-            <span class="sanaa-kpi-label">Reste à percevoir</span>
-            <span class="sanaa-kpi-value">{{ kpisData.reste_a_recevoir.montant | montant(deviseSymbole) }}</span>
-          </div>
-          <div class="sanaa-kpi sanaa-kpi--secondaire">
-            <span class="sanaa-kpi-label">Dépenses</span>
-            <span class="sanaa-kpi-value">{{ kpisData.depenses.montant | montant(deviseSymbole) }}</span>
-            <span v-if="Number(kpisData.surcouts_livraison) !== 0" class="sanaa-kpi-sub">dont {{ kpisData.surcouts_livraison | montant(deviseSymbole) }} de surcoût de livraison</span>
-            <span v-if="delta('depenses')" class="sanaa-kpi-delta" :class="classeDelta('depenses', true)">{{ delta('depenses') }} {{ libelleComparaison }}</span>
           </div>
           <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Taux de livraison</span>
@@ -843,6 +850,8 @@ export default {
   grid-template-columns: repeat(3, 1fr);
   @media (max-width: 900px) { grid-template-columns: 1fr; }
 }
+.sanaa-grid--deux { grid-template-columns: repeat(2, 1fr); @media (max-width: 900px) { grid-template-columns: 1fr; } }
+.sanaa-grid--principaux + .sanaa-grid--principaux { margin-top: 16px; }
 .sanaa-grid--secondaires {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   margin-top: 12px;
