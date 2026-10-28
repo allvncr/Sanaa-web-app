@@ -63,6 +63,22 @@
         </div>
         <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--secondaires">
           <div class="sanaa-kpi sanaa-kpi--secondaire">
+            <span class="sanaa-kpi-label">Articles vendus</span>
+            <span class="sanaa-kpi-value">{{ totalArticles }}</span>
+            <span v-if="totalCommandes" class="sanaa-kpi-sub">{{ articlesParCommande }} article{{ articlesParCommande > 1 ? 's' : '' }} par commande</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
+            <span class="sanaa-kpi-label">Panier moyen</span>
+            <span class="sanaa-kpi-value">{{ panierMoyenGlobal | montant }}</span>
+            <span class="sanaa-kpi-sub">CA / commandes ({{ comparaison.devise_affichage }})</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
+            <span class="sanaa-kpi-label">Taux de repeat</span>
+            <span class="sanaa-kpi-value">{{ nouveauxClients.taux_repeat || 0 }} %</span>
+            <span class="sanaa-kpi-sub">{{ nouveauxClients.recurrents || 0 }} client{{ nouveauxClients.recurrents > 1 ? 's' : '' }} déjà venu{{ nouveauxClients.recurrents > 1 ? 's' : '' }} sur {{ nouveauxClients.actifs || 0 }} qui ont commandé</span>
+            <span v-if="deltaRepeat" class="sanaa-kpi-delta" :class="classeDeltaRepeat">{{ deltaRepeat }} {{ libelleComparaison }}</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Montant perçu consolidé</span>
             <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.encaissements_convertis | montant }}</span>
           </div>
@@ -73,6 +89,7 @@
           <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Nouveaux clients</span>
             <span class="sanaa-kpi-value">{{ nouveauxClients.total || 0 }}</span>
+            <span class="sanaa-kpi-sub">1re commande sur la période</span>
             <span v-if="deltaClients" class="sanaa-kpi-delta" :class="classeDeltaClients">{{ deltaClients }} {{ libelleComparaison }}</span>
             <Sparkline :valeurs="valeursClients" :couleur="COULEURS.clients" />
           </div>
@@ -96,6 +113,7 @@
                 <template slot-scope="{ row }">{{ row.benefice_converti | montant(comparaison.devise_affichage) }}</template>
               </el-table-column>
               <el-table-column prop="nombre_commandes" label="Commandes" min-width="110" />
+              <el-table-column prop="nombre_articles" label="Articles" min-width="90" />
               <el-table-column label="Taux livraison" min-width="120">
                 <template slot-scope="{ row }">{{ row.taux_livraison_pct }} %</template>
               </el-table-column>
@@ -136,12 +154,37 @@
           <div class="sanaa-kpi sanaa-kpi--principal">
             <span class="sanaa-kpi-label">Commandes</span>
             <span class="sanaa-kpi-value">{{ kpisData.nombre_commandes }}</span>
-            <span class="sanaa-kpi-sub">panier moyen {{ panierMoyen | montant(deviseSymbole) }}</span>
+            <span class="sanaa-kpi-sub">commandes confirmées sur la période</span>
             <span v-if="deltaCommandes" class="sanaa-kpi-delta" :class="classeDeltaCommandes">{{ deltaCommandes }} {{ libelleComparaison }}</span>
             <Sparkline :valeurs="valeursCommandes" :couleur="COULEURS.commandes" />
           </div>
         </div>
         <div class="sanaa-grid sanaa-grid--kpis sanaa-grid--secondaires">
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
+            <span class="sanaa-kpi-label">Articles vendus</span>
+            <span class="sanaa-kpi-value">{{ kpisData.nombre_articles }}</span>
+            <span v-if="kpisData.nombre_commandes" class="sanaa-kpi-sub">{{ articlesParCommande }} article{{ articlesParCommande > 1 ? 's' : '' }} par commande</span>
+            <span v-if="deltaArticles" class="sanaa-kpi-delta" :class="classeDeltaArticles">{{ deltaArticles }} {{ libelleComparaison }}</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
+            <span class="sanaa-kpi-label">Panier moyen</span>
+            <span class="sanaa-kpi-value">{{ panierMoyen | montant(deviseSymbole) }}</span>
+            <span class="sanaa-kpi-sub">CA / commandes</span>
+            <span v-if="deltaPanier" class="sanaa-kpi-delta" :class="classeDeltaPanier">{{ deltaPanier }} {{ libelleComparaison }}</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
+            <span class="sanaa-kpi-label">Taux de repeat</span>
+            <span class="sanaa-kpi-value">{{ nouveauxClients.taux_repeat || 0 }} %</span>
+            <span class="sanaa-kpi-sub">{{ nouveauxClients.recurrents || 0 }} client{{ nouveauxClients.recurrents > 1 ? 's' : '' }} déjà venu{{ nouveauxClients.recurrents > 1 ? 's' : '' }} sur {{ nouveauxClients.actifs || 0 }} qui ont commandé</span>
+            <span v-if="deltaRepeat" class="sanaa-kpi-delta" :class="classeDeltaRepeat">{{ deltaRepeat }} {{ libelleComparaison }}</span>
+          </div>
+          <div class="sanaa-kpi sanaa-kpi--secondaire">
+            <span class="sanaa-kpi-label">Nouveaux clients</span>
+            <span class="sanaa-kpi-value">{{ nouveauxClients.total || 0 }}</span>
+            <span class="sanaa-kpi-sub">1re commande sur la période</span>
+            <span v-if="deltaClients" class="sanaa-kpi-delta" :class="classeDeltaClients">{{ deltaClients }} {{ libelleComparaison }}</span>
+            <Sparkline :valeurs="valeursClients" :couleur="COULEURS.clients" />
+          </div>
           <div class="sanaa-kpi sanaa-kpi--secondaire">
             <span class="sanaa-kpi-label">Montant perçu</span>
             <span class="sanaa-kpi-value">{{ kpisData.encaissements.montant | montant(deviseSymbole) }}</span>
@@ -162,12 +205,6 @@
             <span class="sanaa-kpi-label">Taux de livraison</span>
             <span class="sanaa-kpi-value">{{ kpisData.taux_livraison_pct }} %</span>
             <span class="sanaa-kpi-sub">Annulation {{ kpisData.taux_annulation_pct }} % — Retour {{ kpisData.taux_retour_pct }} %</span>
-          </div>
-          <div class="sanaa-kpi sanaa-kpi--secondaire">
-            <span class="sanaa-kpi-label">Nouveaux clients</span>
-            <span class="sanaa-kpi-value">{{ nouveauxClients.total || 0 }}</span>
-            <span v-if="deltaClients" class="sanaa-kpi-delta" :class="classeDeltaClients">{{ deltaClients }} {{ libelleComparaison }}</span>
-            <Sparkline :valeurs="valeursClients" :couleur="COULEURS.clients" />
           </div>
         </div>
       </template>
@@ -400,7 +437,7 @@ export default {
       repartitionCanal: [],
       COULEURS,
       premierChargement: true,
-      nouveauxClients: { total: 0, comparaison: null, points: [] },
+      nouveauxClients: { total: 0, comparaison: null, actifs: 0, recurrents: 0, taux_repeat: 0, taux_repeat_precedent: null, points: [] },
       rentabilitePub: { publicite: 0, ca: 0, nombre_commandes: 0, cout_par_commande: null, retour_sur_pub: null, comparaison: null, devise: null },
       analyseCaPubDepenses: videEvolution(),
       repartitionDepenses: [],
@@ -426,6 +463,53 @@ export default {
     },
     totalCommandes() {
       return ((this.comparaison && this.comparaison.pays) || []).reduce((somme, p) => somme + Number(p.nombre_commandes || 0), 0);
+    },
+    totalArticles() {
+      return ((this.comparaison && this.comparaison.pays) || []).reduce((somme, p) => somme + Number(p.nombre_articles || 0), 0);
+    },
+    panierMoyenGlobal() {
+      const ca = this.comparaison && this.comparaison.global ? Number(this.comparaison.global.ca_converti) : 0;
+      return this.totalCommandes ? ca / this.totalCommandes : 0;
+    },
+    articlesParCommande() {
+      const commandes = this.estVueGlobale ? this.totalCommandes : this.kpisData && this.kpisData.nombre_commandes;
+      const articles = this.estVueGlobale ? this.totalArticles : this.kpisData && this.kpisData.nombre_articles;
+      return commandes ? String(Math.round((articles / commandes) * 10) / 10).replace('.', ',') : '0';
+    },
+    // Variation par rapport à la période précédente (null = pas de comparaison possible).
+    deltaArticles() {
+      const prec = this.kpisData && this.kpisData.comparaison ? this.kpisData.comparaison.nombre_articles : null;
+      if (!prec) return '';
+      const v = ((this.kpisData.nombre_articles - prec) / prec) * 100;
+      return `${v >= 0 ? '+' : ''}${v.toFixed(1)} %`;
+    },
+    classeDeltaArticles() {
+      const prec = this.kpisData && this.kpisData.comparaison ? this.kpisData.comparaison.nombre_articles : null;
+      return prec === null || prec === undefined ? '' : this.kpisData.nombre_articles >= prec ? 'is-hausse' : 'is-baisse';
+    },
+    panierPrecedent() {
+      const c = this.kpisData && this.kpisData.comparaison;
+      return c && c.nombre_commandes ? Number(c.ca.montant) / c.nombre_commandes : null;
+    },
+    deltaPanier() {
+      if (!this.panierPrecedent) return '';
+      const v = ((this.panierMoyen - this.panierPrecedent) / this.panierPrecedent) * 100;
+      return `${v >= 0 ? '+' : ''}${v.toFixed(1)} %`;
+    },
+    classeDeltaPanier() {
+      return this.panierPrecedent === null ? '' : this.panierMoyen >= this.panierPrecedent ? 'is-hausse' : 'is-baisse';
+    },
+    // Taux de repeat : écart en points par rapport à la période précédente.
+    deltaRepeat() {
+      const prec = this.nouveauxClients.taux_repeat_precedent;
+      if (prec === null || prec === undefined) return '';
+      const v = (this.nouveauxClients.taux_repeat || 0) - prec;
+      return `${v >= 0 ? '+' : ''}${v.toFixed(1)} pt`;
+    },
+    classeDeltaRepeat() {
+      const prec = this.nouveauxClients.taux_repeat_precedent;
+      if (prec === null || prec === undefined) return '';
+      return (this.nouveauxClients.taux_repeat || 0) >= prec ? 'is-hausse' : 'is-baisse';
     },
     deltaCommandes() {
       const precedent = this.kpisData && this.kpisData.comparaison ? this.kpisData.comparaison.nombre_commandes : null;
