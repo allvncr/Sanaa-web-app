@@ -42,6 +42,9 @@
       <div class="sanaa-card sanaa-table-scroll" style="margin-top:16px">
         <el-table :data="resultat.paiements || []" stripe @row-click="ouvrir">
           <el-table-column prop="commande_numero" label="Commande" min-width="140" />
+          <el-table-column label="Client" min-width="160">
+            <template slot-scope="{ row }">{{ row.client_nom || '—' }}</template>
+          </el-table-column>
           <el-table-column prop="moyen_paiement" label="Moyen" min-width="140" />
           <el-table-column prop="type" label="Type" min-width="90" />
           <el-table-column label="Montant" min-width="120">
