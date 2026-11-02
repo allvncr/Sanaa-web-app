@@ -22,8 +22,12 @@ export default {
     permissions: (state) => (state.utilisateur ? state.utilisateur.permissions : []),
     porteeGlobale: (state) => (state.utilisateur ? state.utilisateur.role.portee === 'global' : false),
     paysAutorises: (state) => (state.utilisateur ? state.utilisateur.pays_autorises : []),
+    // Seul le Super administrateur passe outre la liste : « portée globale » veut
+    // dire « tous les pays », pas « tous les droits » (rôle Auditeur : global mais
+    // en lecture seule). Le backend, lui, ne regarde que la liste de permissions.
     aPermission: (state, getters) => (permission) =>
-      getters.porteeGlobale || getters.permissions.includes(permission),
+      (state.utilisateur && state.utilisateur.role.nom === 'Super administrateur') ||
+      getters.permissions.includes(permission),
   },
   mutations: {
     DEFINIR_TOKENS(state, { accessToken, refreshToken }) {

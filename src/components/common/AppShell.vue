@@ -98,7 +98,7 @@ export default {
         { name: 'relances', label: 'Relances', icone: 'el-icon-chat-dot-round', permission: 'clients:voir' },
         { name: 'catalogue', label: 'Catalogue global', icone: 'el-icon-goods', permission: 'catalogue:voir' },
         { name: 'prix-par-pays', label: 'Prix par pays', icone: 'el-icon-coin', permission: 'catalogue:voir' },
-        { name: 'exports', label: 'Exports', icone: 'el-icon-download', permission: 'exports:generer' },
+        { name: 'exports', label: 'Exports', icone: 'el-icon-download', permission: 'exports:telecharger' },
         { name: 'stock', label: 'Stock', icone: 'el-icon-box', permission: 'stock:voir' },
         { name: 'depenses', label: 'Dépenses', icone: 'el-icon-money', permission: 'depenses:voir' },
         { name: 'pays', label: 'Pays', icone: 'el-icon-place', permission: 'pays:voir' },

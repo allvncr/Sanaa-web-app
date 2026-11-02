@@ -23,7 +23,7 @@
     </div>
 
     <el-dialog :title="clientActuel ? 'Fiche client' : 'Nouveau client'" :visible.sync="dialogueOuvert" width="480px">
-      <el-form :model="form" label-position="top">
+      <el-form :model="form" label-position="top" :disabled="!!clientActuel && !$can('clients:modifier')">
         <el-form-item label="Nom" required><el-input v-model="form.nom" /></el-form-item>
         <el-form-item label="Téléphone / WhatsApp"><el-input v-model="form.telephone_whatsapp" /></el-form-item>
         <el-form-item label="Ville"><el-input v-model="form.ville" /></el-form-item>
@@ -44,7 +44,7 @@
 
       <span slot="footer">
         <el-button @click="dialogueOuvert = false">Fermer</el-button>
-        <el-button type="primary" @click="enregistrer">Enregistrer</el-button>
+        <el-button v-if="clientActuel ? $can('clients:modifier') : $can('clients:creer')" type="primary" @click="enregistrer">Enregistrer</el-button>
       </span>
     </el-dialog>
   </div>

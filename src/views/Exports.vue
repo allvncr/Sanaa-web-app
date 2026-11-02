@@ -4,7 +4,7 @@
       <h1>Exports</h1>
     </div>
 
-    <div class="sanaa-grid sanaa-grid--generation">
+    <div v-can="'exports:generer'" class="sanaa-grid sanaa-grid--generation">
       <div class="sanaa-card">
         <h3 style="margin-top:0">Export interne</h3>
         <p class="sanaa-text-muted">Un fichier par pays, pour le suivi commercial de l'équipe.</p>

@@ -113,7 +113,7 @@ const routes = [
         path: 'exports',
         name: 'exports',
         component: () => import('@/views/Exports.vue'),
-        meta: { permission: 'exports:generer' },
+        meta: { permission: 'exports:telecharger' },
       },
       {
         path: 'pays',

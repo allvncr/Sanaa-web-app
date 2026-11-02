@@ -36,6 +36,7 @@
           <div class="ligne__droite">
             <strong v-if="i.montant !== null" class="ligne__montant">{{ i.montant | montant(deviseDe(i.pays_id)) }}</strong>
             <el-button
+              v-can="'clients:modifier'"
               size="small"
               icon="el-icon-chat-dot-round"
               class="btn-whatsapp"

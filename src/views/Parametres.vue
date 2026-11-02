@@ -5,8 +5,8 @@
     </div>
 
     <el-tabs v-model="onglet">
-      <el-tab-pane label="Taux de change" name="taux" v-if="$can('parametres:gerer_taux_change')">
-        <div class="sanaa-toolbar">
+      <el-tab-pane label="Taux de change" name="taux">
+        <div v-can="'parametres:gerer_taux_change'" class="sanaa-toolbar">
           <el-button size="small" icon="el-icon-plus" @click="dialogueTaux = true">Ajouter un taux</el-button>
         </div>
         <div class="sanaa-card sanaa-table-scroll">
@@ -28,7 +28,7 @@
       </el-tab-pane>
 
       <el-tab-pane label="Catégories de dépenses" name="depenses" v-if="$can('depenses:voir')">
-        <div class="sanaa-toolbar">
+        <div v-can="'depenses:creer'" class="sanaa-toolbar">
           <el-input v-model="nouvelleCategorie" placeholder="Nouvelle catégorie" size="small" style="width:220px" />
           <el-button size="small" icon="el-icon-plus" @click="ajouterCategorie">Ajouter</el-button>
         </div>

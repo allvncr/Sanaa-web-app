@@ -94,7 +94,7 @@
     <el-dialog :title="produitActuel ? produitActuel.nom : ''" :visible.sync="dialogueDetail" width="640px">
       <template v-if="produitActuel">
         <h4 style="margin-top:0">Informations du produit</h4>
-        <div class="sanaa-grid sanaa-grid--noms">
+        <div class="sanaa-grid sanaa-grid--noms" :class="{ 'is-lecture-seule': !$can('catalogue:modifier') }">
           <el-form-item label="Nom (français)">
             <el-input v-model="produitEnEdition.nom" size="small" />
           </el-form-item>
@@ -123,7 +123,7 @@
           </el-form-item>
         </div>
         <div class="sanaa-toolbar" style="justify-content: space-between;">
-          <el-button size="small" type="primary" @click="enregistrerProduit">Enregistrer les modifications</el-button>
+          <el-button size="small" type="primary" v-can="'catalogue:modifier'" @click="enregistrerProduit">Enregistrer les modifications</el-button>
           <el-button size="small" type="danger" plain icon="el-icon-delete" v-can="'catalogue:supprimer'" @click="supprimerProduit">
             Supprimer le produit
           </el-button>
@@ -142,11 +142,11 @@
             <span :class="{ 'is-manquant': !v.couleur_zh }">{{ v.couleur_zh || 'Couleur chinoise manquante' }}</span>
             <span class="sanaa-text-muted">{{ v.prix_pays.length }} prix pays configuré(s)</span>
             <span class="variante-row__spacer" />
-            <el-button size="mini" icon="el-icon-edit" circle @click="commencerEditerVariante(v)" />
+            <el-button size="mini" icon="el-icon-edit" circle v-can="'catalogue:modifier'" @click="commencerEditerVariante(v)" />
             <el-button size="mini" icon="el-icon-delete" circle v-can="'catalogue:supprimer'" @click="supprimerVariante(v)" />
           </template>
         </div>
-        <div class="sanaa-grid sanaa-grid--nouvelle-variante" style="margin-top:10px">
+        <div v-can="'catalogue:modifier'" class="sanaa-grid sanaa-grid--nouvelle-variante" style="margin-top:10px">
           <el-input v-model="nouvelleCouleur" placeholder="Couleur (français)" size="small" />
           <el-input v-model="nouvelleCouleurZh" placeholder="Couleur (chinois)" size="small" />
           <el-button size="small" icon="el-icon-plus" @click="ajouterVariante">Ajouter la variante</el-button>
@@ -350,6 +350,8 @@ export default {
 .produit-card__sku { color: var(--sanaa-text-muted); font-size: 0.8rem; margin: 4px 0; }
 .is-manquant { color: var(--sanaa-warning); font-style: italic; }
 .sanaa-grid--noms { grid-template-columns: 1fr 1fr; gap: 10px; }
+// Rôle en lecture seule (Auditeur) : champs visibles mais non modifiables.
+.is-lecture-seule { pointer-events: none; opacity: 0.75; }
 .sanaa-grid--nouvelle-variante { grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
 @media (max-width: 560px) {
   .sanaa-grid--noms, .sanaa-grid--nouvelle-variante { grid-template-columns: 1fr; }
