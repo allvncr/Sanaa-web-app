@@ -54,6 +54,10 @@
           <div class="sanaa-kpi sanaa-kpi--principal">
             <span class="sanaa-kpi-label">Bénéfice consolidé</span>
             <span class="sanaa-kpi-value">{{ comparaison.global && comparaison.global.benefice_converti | montant }}</span>
+            <div class="kpi-reel" title="Montant perçu − dépenses : ce qu'il reste réellement une fois les dépenses payées avec l'argent déjà encaissé">
+              <span class="kpi-reel__label">Bénéfice réel (sur le perçu)</span>
+              <strong class="kpi-reel__valeur" :class="{ 'is-negatif': comparaison.global && Number(comparaison.global.benefice_reel_converti) < 0 }">{{ comparaison.global && comparaison.global.benefice_reel_converti | montant }}</strong>
+            </div>
           </div>
           <div class="sanaa-kpi sanaa-kpi--principal">
             <span class="sanaa-kpi-label">Commandes</span>
@@ -115,6 +119,9 @@
               <el-table-column label="Bénéfice" min-width="130">
                 <template slot-scope="{ row }">{{ row.benefice_converti | montant(comparaison.devise_affichage) }}</template>
               </el-table-column>
+              <el-table-column label="Bénéfice réel" min-width="130">
+                <template slot-scope="{ row }">{{ row.benefice_reel_converti | montant(comparaison.devise_affichage) }}</template>
+              </el-table-column>
               <el-table-column prop="nombre_commandes" label="Commandes" min-width="110" />
               <el-table-column prop="nombre_articles" label="Articles" min-width="90" />
               <el-table-column label="Taux livraison" min-width="120">
@@ -153,6 +160,10 @@
             <span class="sanaa-kpi-value">{{ kpisData.benefice.montant | montant(deviseSymbole) }}</span>
             <span class="sanaa-kpi-sub">Marge {{ kpisData.marge_pct }} %</span>
             <span v-if="delta('benefice')" class="sanaa-kpi-delta" :class="classeDelta('benefice')">{{ delta('benefice') }} {{ libelleComparaison }}</span>
+            <div class="kpi-reel" title="Montant perçu − dépenses : ce qu'il reste réellement une fois les dépenses payées avec l'argent déjà encaissé">
+              <span class="kpi-reel__label">Bénéfice réel (sur le perçu)</span>
+              <strong class="kpi-reel__valeur" :class="{ 'is-negatif': Number(kpisData.benefice_reel.montant) < 0 }">{{ kpisData.benefice_reel.montant | montant(deviseSymbole) }}</strong>
+            </div>
           </div>
           <div class="sanaa-kpi sanaa-kpi--principal">
             <span class="sanaa-kpi-label">Commandes</span>
@@ -852,6 +863,18 @@ export default {
 }
 .sanaa-grid--deux { grid-template-columns: repeat(2, 1fr); @media (max-width: 900px) { grid-template-columns: 1fr; } }
 .sanaa-grid--principaux + .sanaa-grid--principaux { margin-top: 16px; }
+.kpi-reel {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--sanaa-border, rgba(0, 0, 0, 0.15));
+  font-size: 0.85rem;
+  &__label { color: var(--sanaa-text-muted, inherit); }
+  &__valeur { font-size: 1rem; &.is-negatif { color: #c0392b; } }
+}
 .sanaa-grid--secondaires {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   margin-top: 12px;
