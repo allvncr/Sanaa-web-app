@@ -35,68 +35,77 @@ export function numeroInternational(telephone, indicatif) {
   return indicatif + national;
 }
 
+// Retour du 04/11/2026 : plus aucun emoji (ils s'affichaient en « � » chez
+// beaucoup de clients). Mise en forme uniquement en ASCII : une phrase par
+// ligne, une ligne vide entre les blocs, mots clés en *gras* (syntaxe WhatsApp).
+const assembler = (...blocs) => blocs.filter(Boolean).join('\n\n');
+
 /**
  * Message adapté à l'étape où en est la commande, avec le lien de suivi.
  * `commande` vient de l'API (client_id peuplé) ; `options.devise` est le
  * symbole de la devise (ex. "F CFA") et `options.jourLivraison` le jour prévu
  * au calendrier, s'il existe.
  *
- * Ton et mise en forme repris des messages que l'équipe envoyait déjà à la main
- * (retour du 09/10/2026) : vouvoiement chaleureux, emojis, court, avec le lien
- * de suivi et le numéro de commande en dernière ligne.
+ * Ton repris des messages que l'équipe envoyait déjà à la main (retour du
+ * 09/10/2026) : vouvoiement chaleureux, court, avec le lien de suivi et le
+ * numéro de commande en dernière ligne.
  */
 export function messageCommande(commande, { lien, devise = '', jourLivraison = '', fraisLivraison = 0 } = {}) {
   const client = commande.client_id || {};
   const prenom = client.nom ? String(client.nom).trim().split(/\s+/)[0] : '';
-  const salut = prenom ? `Bonjour ${prenom} 😊` : 'Bonjour 😊';
+  const salut = prenom ? `Bonjour ${prenom},` : 'Bonjour,';
   const numero = commande.numero;
   const reste = Number(commande.reste_a_payer) || 0;
   // Le surplus déjà versé par le client compte comme frais de livraison réglés.
   const surplus = Number(commande.surplus_regle) || 0;
   const frais = Math.max(0, (Number(fraisLivraison) || 0) - surplus);
-  const m = (v) => formaterMontant(v, devise);
+  const m = (v) => `*${formaterMontant(v, devise)}*`;
 
   // Les frais de livraison ne sont pas inclus dans le solde de la commande : on
   // annonce le total à prévoir le jour de la livraison.
   let paiement = '';
-  if (reste > 0 && frais > 0) paiement = `💰 À prévoir à la livraison : ${m(reste)} de solde + ${m(frais)} de frais de livraison, soit ${m(reste + frais)}.`;
-  else if (reste > 0) paiement = `💰 Solde à régler à la livraison : ${m(reste)}.`;
-  else if (frais > 0) paiement = `✅ Votre commande est déjà réglée, il ne reste que les frais de livraison : ${m(frais)}.`;
-  else if (surplus > 0) paiement = '✅ Tout est déjà réglé, rien à payer à la livraison.';
+  if (reste > 0 && frais > 0) {
+    paiement = `À prévoir à la livraison :\nSolde ${m(reste)} + frais de livraison ${m(frais)}\nSoit ${m(reste + frais)} au total.`;
+  } else if (reste > 0) {
+    paiement = `Solde à régler à la livraison : ${m(reste)}`;
+  } else if (frais > 0) {
+    paiement = `Votre commande est déjà réglée.\nIl ne reste que les frais de livraison : ${m(frais)}`;
+  } else if (surplus > 0) {
+    paiement = 'Tout est déjà réglé, rien à payer à la livraison.';
+  }
 
-  const suivi = `Suivez votre commande ici 👉 ${lien}\n(votre numéro de téléphone vous sera demandé)`;
+  const suivi = `Suivez votre commande ici :\n${lien}\n(votre numéro de téléphone vous sera demandé)`;
   const pied = `Commande ${numero}`;
-  const assembler = (...blocs) => blocs.filter(Boolean).join('\n\n');
 
   if (commande.statut_commande === 'Annulee') {
-    return assembler(`${salut}`, `Votre commande a été annulée. Pour toute question, n'hésitez pas à nous écrire 🙏`, pied);
+    return assembler(salut, "Votre commande a été *annulée*.\nPour toute question, n'hésitez pas à nous écrire.", pied);
   }
   switch (commande.statut_livraison) {
     case 'Livree':
       return assembler(
-        `${salut.replace(' 😊', '')} 🎉`,
-        'Votre bijou 💎 vous a bien été livré ! Merci pour votre confiance, nous espérons qu\'il vous plaît ❤️',
+        salut,
+        "Votre bijou vous a bien été *livré*.\nMerci pour votre confiance, nous espérons qu'il vous plaît.",
         pied,
       );
     case 'Retour_echec':
       return assembler(
-        `${salut}`,
-        'Nous n\'avons malheureusement pas pu vous livrer votre bijou 💎 😕\nQuand serez-vous disponible pour une nouvelle livraison ? Répondez-nous ici, nous reprogrammons tout de suite 🚚',
+        salut,
+        "Nous n'avons malheureusement pas pu vous livrer votre bijou.\nQuand serez-vous disponible pour une nouvelle livraison ?\nRépondez-nous ici, nous reprogrammons tout de suite.",
         suivi,
         pied,
       );
     case 'En_livraison':
       return assembler(
-        `${salut}`,
-        `Votre bijou 💎 est en cours de livraison 🚚${jourLivraison ? ` (prévue le ${jourLivraison})` : ''}\nMerci de rester joignable 🙏`,
+        salut,
+        `Votre bijou est *en cours de livraison*${jourLivraison ? ` (prévue le ${jourLivraison})` : ''}.\nMerci de rester joignable.`,
         paiement,
         suivi,
         pied,
       );
     case 'Recue_en_pays':
       return assembler(
-        `${salut} bonne nouvelle !`,
-        'Votre bijou 💎 vient d\'arriver chez nous 🎉\nNous programmons votre livraison 🚚 et vous contactons très vite.',
+        salut,
+        "Bonne nouvelle, votre bijou vient d'*arriver chez nous*.\nNous programmons votre livraison et vous contactons très vite.",
         paiement,
         suivi,
         pied,
@@ -106,25 +115,25 @@ export function messageCommande(commande, { lien, devise = '', jourLivraison = '
   }
   if (commande.statut_fabrication === 'Terminee') {
     return assembler(
-      `${salut} bonne nouvelle !`,
-      'Votre bijou personnalisé 💎 est terminé ✨\nIl est en route vers nous : réception sous 5 jours, puis nous programmons aussitôt votre livraison 🚚',
+      salut,
+      'Bonne nouvelle, votre bijou personnalisé est *terminé*.\nIl est en route vers nous : réception sous 5 jours,\npuis nous programmons aussitôt votre livraison.',
       suivi,
-      `Merci pour votre confiance ❤️\n${pied}`,
+      `Merci pour votre confiance.\n${pied}`,
     );
   }
   if (commande.statut_fabrication === 'En_fabrication') {
     return assembler(
-      `${salut}`,
-      'Votre bijou personnalisé 💎 est en cours de fabrication ✨\nNous vous prévenons dès qu\'il est prêt.',
+      salut,
+      "Votre bijou personnalisé est *en cours de fabrication*.\nNous vous prévenons dès qu'il est prêt.",
       suivi,
-      `Merci pour votre confiance ❤️\n${pied}`,
+      `Merci pour votre confiance.\n${pied}`,
     );
   }
   return assembler(
-    `${salut} merci pour votre commande ✅`,
-    'Elle est bien confirmée et part bientôt en fabrication 💎.',
+    salut,
+    'Merci pour votre commande.\nElle est bien *confirmée* et part bientôt en fabrication.',
     suivi,
-    `Merci pour votre confiance ❤️\n${pied}`,
+    `Merci pour votre confiance.\n${pied}`,
   );
 }
 
@@ -151,27 +160,26 @@ export function lienWhatsApp(commande, pays, options = {}) {
  */
 export function messageRelance(type, { nom, numero, montant = 0 }, { devise = '' } = {}) {
   const prenom = nom ? String(nom).trim().split(/\s+/)[0] : '';
-  const salut = prenom ? `Bonjour ${prenom} 😊` : 'Bonjour 😊';
+  const salut = prenom ? `Bonjour ${prenom},` : 'Bonjour,';
   const pied = numero ? `Commande ${numero}` : '';
-  const assembler = (...blocs) => blocs.filter(Boolean).join('\n\n');
   if (type === 'reste_a_payer') {
     return assembler(
       salut,
-      `Nous espérons que votre bijou 💎 vous plaît ❤️\nIl reste un solde de ${formaterMontant(montant, devise)} à régler sur votre commande. Pourriez-vous nous le régler dès que possible ? Merci beaucoup 🙏`,
+      `Nous espérons que votre bijou vous plaît.\nIl reste un solde de *${formaterMontant(montant, devise)}* à régler sur votre commande.\nPourriez-vous nous le régler dès que possible ?\nMerci beaucoup.`,
       pied,
     );
   }
   if (type === 'avis') {
     return assembler(
       salut,
-      'Votre bijou 💎 est arrivé il y a quelques jours : nous espérons qu\'il vous plaît ❤️\nVotre avis compte beaucoup pour nous ! Auriez-vous un petit mot, ou une photo de vous avec votre bijou, à nous partager ? 📸',
-      `Merci pour votre confiance 🙏\n${pied}`.trim(),
+      "Votre bijou est arrivé il y a quelques jours : nous espérons qu'il vous plaît.\nVotre avis compte beaucoup pour nous !\nAuriez-vous un petit mot, ou une photo de vous avec votre bijou, à nous partager ?",
+      `Merci pour votre confiance.\n${pied}`.trim(),
     );
   }
   return assembler(
     salut,
-    'Nous espérons que votre bijou 💎 vous plaît toujours ❤️\nNous avons de nouvelles créations à vous faire découvrir : souhaitez-vous que nous vous les présentions ? ✨',
-    'À très vite 🙏\nSANAA',
+    'Nous espérons que votre bijou vous plaît toujours.\nNous avons de nouvelles créations à vous faire découvrir :\nsouhaitez-vous que nous vous les présentions ?',
+    'À très vite,\nSANAA',
   );
 }
 
