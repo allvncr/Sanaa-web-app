@@ -116,7 +116,11 @@ export function messageCommande(commande, { lien, devise = '', jourLivraison = '
   if (commande.statut_fabrication === 'Terminee') {
     return assembler(
       salut,
-      'Bonne nouvelle, votre bijou personnalisé est *terminé*.\nIl est en route vers nous : réception sous 5 jours,\npuis nous programmons aussitôt votre livraison.',
+      // Retour du 07/11/2026 : l'ancien texte était lu comme « votre bijou est prêt à
+      // être livré » (une dizaine de clients ont écrit pour la livraison). On dit
+      // explicitement que la livraison n'est PAS encore possible et qu'on les recontacte.
+      'La fabrication de votre bijou personnalisé est *terminée*.\nIl n\'est pas encore prêt à être livré : il doit d\'abord voyager jusqu\'à chez nous, ce qui prend environ *7 jours*.',
+      'Nous vous contactons dès son arrivée pour programmer la livraison.\nVous n\'avez rien à faire pour le moment.',
       suivi,
       `Merci pour votre confiance.\n${pied}`,
     );

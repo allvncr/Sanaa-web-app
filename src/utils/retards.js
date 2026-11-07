@@ -1,9 +1,9 @@
 // Retards repérés sur une commande (retour du 23/10/2026) : mêmes délais que le
-// tableau « À traiter » et la page de suivi (7 jours de fabrication, 5 jours de
+// tableau « À traiter » et la page de suivi (7 jours de fabrication, 7 jours de
 // transit après la fabrication). Sert à marquer les lignes urgentes des listes.
 const JOUR_MS = 24 * 60 * 60 * 1000;
 const JOURS_FABRICATION = 7;
-const JOURS_TRANSIT = 5;
+const JOURS_TRANSIT = 7;
 
 const jours = (de, a) => Math.floor((a.getTime() - new Date(de).getTime()) / JOUR_MS);
 const plus = (date, n) => new Date(new Date(date).getTime() + n * JOUR_MS);
