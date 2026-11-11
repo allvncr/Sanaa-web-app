@@ -1,7 +1,5 @@
 import Vue from 'vue';
-import ElementUI from 'element-ui';
-import locale from 'element-ui/lib/locale/lang/fr';
-import VueApexCharts from 'vue-apexcharts';
+import './plugins/element';
 import App from './App.vue';
 import router from './router';
 import store from './store';
@@ -13,10 +11,10 @@ import { initialiserTheme } from './utils/theme';
 import 'element-ui/lib/theme-chalk/index.css';
 import './assets/styles/global.scss';
 
-Vue.use(ElementUI, { locale });
-Vue.use(VueApexCharts);
 Vue.use(permissionsPlugin);
-Vue.component('apexchart', VueApexCharts);
+// Graphiques : la bibliothèque (~500 Ko) n'est téléchargée que lorsqu'un écran
+// affiche un <apexchart>, pas au démarrage de l'application.
+Vue.component('apexchart', () => import('vue-apexcharts').then((m) => m.default || m));
 
 Vue.filter('montant', formaterMontant);
 Vue.filter('dateFr', formaterDate);

@@ -6,10 +6,14 @@
     </div>
 
     <div class="sanaa-toolbar">
-      <el-input v-model="recherche" placeholder="Rechercher (nom, téléphone)" prefix-icon="el-icon-search" style="max-width:280px" @input="chargerDepuisFiltre" />
+      <el-input v-model="recherche" placeholder="Rechercher (nom, téléphone)" prefix-icon="el-icon-search" style="max-width:280px" @input="rechercherDiffere" />
     </div>
 
-    <div class="sanaa-card sanaa-table-scroll" v-loading="chargement">
+    <!-- Premier chargement : lignes grises animées à la place d'un écran vide. -->
+    <div v-if="chargement && clients.length === 0" class="sanaa-card">
+      <div v-for="n in 8" :key="n" class="sanaa-skeleton sanaa-skeleton--ligne" />
+    </div>
+    <div v-else class="sanaa-card sanaa-table-scroll" v-loading="chargement">
       <el-table :data="clients" stripe @row-click="ouvrirFiche">
         <el-table-column prop="nom" label="Nom" min-width="160" />
         <el-table-column prop="telephone_whatsapp" label="Téléphone" min-width="150" />
@@ -73,7 +77,13 @@ export default {
   computed: { ...mapState('paysContexte', { paysActifId: 'paysActifId' }) },
   watch: { paysActifId() { this.chargerDepuisFiltre(); } },
   mounted() { this.charger(); },
+  beforeDestroy() { clearTimeout(this.minuterie); },
   methods: {
+    // Recherche : on attend 350 ms sans frappe avant d'interroger le serveur.
+    rechercherDiffere() {
+      clearTimeout(this.minuterie);
+      this.minuterie = setTimeout(this.chargerDepuisFiltre, 350);
+    },
     chargerDepuisFiltre() {
       this.pagination.page = 1;
       this.charger();
@@ -89,6 +99,7 @@ export default {
     },
     async charger() {
       this.chargement = true;
+      const jeton = (this.jetonChargement = (this.jetonChargement || 0) + 1);
       try {
         const { data } = await clientsApi.lister({
           pays_id: this.paysActifId || undefined,
@@ -96,10 +107,11 @@ export default {
           page: this.pagination.page,
           limite: this.pagination.limite,
         });
+        if (jeton !== this.jetonChargement) return; // une recherche plus récente a pris le relais
         this.clients = data.data;
         this.pagination.total = data.meta.total;
       } finally {
-        this.chargement = false;
+        if (jeton === this.jetonChargement) this.chargement = false;
       }
     },
     ouvrirCreation() {

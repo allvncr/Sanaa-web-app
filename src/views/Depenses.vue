@@ -19,7 +19,11 @@
       />
     </div>
 
-    <div class="sanaa-card sanaa-table-scroll" v-loading="chargement">
+    <!-- Premier chargement : lignes grises animées à la place d'un écran vide. -->
+    <div v-if="chargement && depenses.length === 0" class="sanaa-card">
+      <div v-for="n in 8" :key="n" class="sanaa-skeleton sanaa-skeleton--ligne" />
+    </div>
+    <div v-else class="sanaa-card sanaa-table-scroll" v-loading="chargement">
       <el-table :data="depenses" stripe show-summary :summary-method="calculerTotal">
         <el-table-column label="Date" min-width="110">
           <template slot-scope="{ row }">{{ row.date | dateFr }}</template>

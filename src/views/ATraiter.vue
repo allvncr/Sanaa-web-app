@@ -23,6 +23,10 @@
       <i class="el-icon-circle-check" /> Rien à traiter pour le moment, tout est à jour.
     </p>
 
+    <div v-if="!donnees && chargement" class="sanaa-card">
+      <div v-for="n in 6" :key="n" class="sanaa-skeleton sanaa-skeleton--ligne" />
+    </div>
+
     <div v-if="donnees" v-loading="chargement">
       <section
         v-for="s in donnees.sections"

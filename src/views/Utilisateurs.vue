@@ -5,7 +5,11 @@
       <el-button type="primary" icon="el-icon-plus" v-can="'utilisateurs:creer'" @click="ouvrirCreation">Nouvel utilisateur</el-button>
     </div>
 
-    <div class="sanaa-card sanaa-table-scroll" v-loading="chargement">
+    <!-- Premier chargement : lignes grises animées à la place d'un écran vide. -->
+    <div v-if="chargement && utilisateurs.length === 0" class="sanaa-card">
+      <div v-for="n in 8" :key="n" class="sanaa-skeleton sanaa-skeleton--ligne" />
+    </div>
+    <div v-else class="sanaa-card sanaa-table-scroll" v-loading="chargement">
       <el-table :data="utilisateurs" stripe>
         <el-table-column prop="nom" label="Nom" min-width="160" />
         <el-table-column prop="email" label="Email" min-width="200" />

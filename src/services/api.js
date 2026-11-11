@@ -17,7 +17,29 @@ import router from '@/router';
 // (Nginx fait le proxy). Sans cette variable, on retombe sur l'URL Render
 // actuelle (Netlify) pour ne rien casser.
 const baseURL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api/v1' : 'https://sanaa-api.onrender.com/api/v1');
-const api = axios.create({ baseURL });
+// Délai maximal d'une requête : au-delà, l'écran affiche une erreur au lieu de
+// tourner indéfiniment (réseau mobile instable). Large pour les exports.
+const api = axios.create({ baseURL, timeout: 60000 });
+
+// Requêtes GET identiques lancées en même temps (ex. deux composants qui
+// demandent la même liste, double clic) : une seule requête part au réseau et
+// chaque appelant reçoit sa propre copie de la réponse.
+const adapterReseau = axios.getAdapter(api.defaults.adapter);
+const requetesEnCours = new Map();
+const copie = (valeur) => (valeur === undefined ? valeur : JSON.parse(JSON.stringify(valeur)));
+api.defaults.adapter = (config) => {
+  const estGetSimple = (config.method || 'get').toLowerCase() === 'get' && !config.responseType && !config.signal;
+  if (!estGetSimple) return adapterReseau(config);
+  const auth = config.headers && config.headers.get ? config.headers.get('Authorization') : '';
+  const cle = `${api.getUri(config)}|${auth}`;
+  let attente = requetesEnCours.get(cle);
+  if (!attente) {
+    attente = adapterReseau(config).finally(() => requetesEnCours.delete(cle));
+    requetesEnCours.set(cle, attente);
+    return attente;
+  }
+  return attente.then((reponse) => ({ ...reponse, config, data: copie(reponse.data) }));
+};
 
 api.interceptors.request.use((config) => {
   const token = store.state.auth.accessToken;

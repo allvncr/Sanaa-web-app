@@ -11,13 +11,17 @@
     </div>
 
     <div class="sanaa-toolbar">
-      <el-input v-model="recherche" placeholder="Rechercher un produit" prefix-icon="el-icon-search" style="max-width:260px" @input="charger" />
+      <el-input v-model="recherche" placeholder="Rechercher un produit" prefix-icon="el-icon-search" style="max-width:260px" @input="rechercherDiffere" />
       <el-select v-model="filtreCategorie" placeholder="Collection" clearable size="small" style="width:180px" @change="charger">
         <el-option v-for="c in categories" :key="c._id" :value="c._id" :label="c.nom" />
       </el-select>
     </div>
 
-    <div class="sanaa-grid sanaa-grid--produits" v-loading="chargement">
+    <!-- Premier chargement : cartes grises animées à la place d'un écran vide. -->
+    <div v-if="chargement && produits.length === 0" class="sanaa-grid sanaa-grid--produits">
+      <div v-for="n in 8" :key="n" class="sanaa-skeleton sanaa-skeleton--kpi" />
+    </div>
+    <div v-else class="sanaa-grid sanaa-grid--produits" v-loading="chargement">
       <div v-for="p in produits" :key="p._id" class="sanaa-card produit-card" @click="ouvrir(p)">
         <h3>{{ p.nom }}</h3>
         <p v-if="p.fabrication_locale" class="produit-card__zh">Fabrication locale (non envoyé à l'usine)</p>
@@ -191,14 +195,22 @@ export default {
     this.categories = data.data;
     this.charger();
   },
+  beforeDestroy() { clearTimeout(this.minuterie); },
   methods: {
+    // Recherche : on attend 350 ms sans frappe avant d'interroger le serveur.
+    rechercherDiffere() {
+      clearTimeout(this.minuterie);
+      this.minuterie = setTimeout(this.charger, 350);
+    },
     async charger() {
       this.chargement = true;
+      const jeton = (this.jetonChargement = (this.jetonChargement || 0) + 1);
       try {
         const { data } = await catalogueApi.listerProduits({ q: this.recherche || undefined, categorie_id: this.filtreCategorie || undefined });
+        if (jeton !== this.jetonChargement) return; // une recherche plus récente a pris le relais
         this.produits = data.data;
       } finally {
-        this.chargement = false;
+        if (jeton === this.jetonChargement) this.chargement = false;
       }
     },
     async creerProduit() {
