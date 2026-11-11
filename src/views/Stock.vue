@@ -649,7 +649,7 @@ export default {
 .deux-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; @media (max-width: 520px) { grid-template-columns: 1fr; } }
 .gros { font-size: 1rem; padding: 4px 14px; }
 .titre-achat { margin: 4px 0 10px; font-size: 0.95rem; }
-.lien-commande { color: var(--sanaa-accent-2-dark); font-weight: 600; cursor: pointer; margin-right: 8px; &:hover { text-decoration: underline; } }
+.lien-commande { color: var(--sanaa-accent-2-dark); font-weight: 600; cursor: pointer; margin-right: 8px; @media (hover: hover) and (pointer: fine) { &:hover { text-decoration: underline; } } }
 .carte-article__chiffres { margin: 6px 0 0; }
 .carte-article {
   margin-bottom: 10px;

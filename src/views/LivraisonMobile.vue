@@ -49,7 +49,7 @@
           </div>
         </div>
         <div v-if="progressionTotal > 0" class="hero__progression">
-          <div class="hero__barre"><div class="hero__barre-remplie" :style="{ width: progression + '%' }" /></div>
+          <div class="hero__barre"><div class="hero__barre-remplie" :style="{ transform: 'scaleX(' + progression / 100 + ')' }" /></div>
           <span>{{ progressionFaits }}/{{ progressionTotal }} livrés {{ jourFiltre && jourFiltre !== aujourdhui ? 'ce jour-là' : "aujourd'hui" }}</span>
         </div>
       </section>
@@ -672,8 +672,9 @@ $barre-onglets: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  &:active { transform: scale(0.94); }
-  &.is-tourne i { animation: tourne 0.9s linear infinite; }
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  &:active { transform: scale(0.96); }
+  &.is-tourne i { animation: tourne 0.65s linear infinite; }
   &--clair { background: rgba(255, 255, 255, 0.18); border-color: transparent; color: #fff; }
   &.is-actif { background: var(--sanaa-accent-2-dark); border-color: var(--sanaa-accent-2-dark); color: #fff; }
 }
@@ -720,7 +721,8 @@ $barre-onglets: 64px;
 }
 .hero__progression { margin-top: 14px; font-size: 0.75rem; opacity: 0.95; }
 .hero__barre { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.28); overflow: hidden; margin-bottom: 6px; }
-.hero__barre-remplie { height: 100%; background: #fff; border-radius: 6px; transition: width 0.4s; }
+// scaleX (composité) plutôt que width (recalcul de mise en page à chaque image).
+.hero__barre-remplie { height: 100%; width: 100%; background: #fff; border-radius: 6px; transform-origin: left; transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1); }
 
 // ---------- jours
 .jours { display: flex; gap: 8px; overflow-x: auto; padding: 16px 0 6px; scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
@@ -756,7 +758,7 @@ $barre-onglets: 64px;
   background: var(--sanaa-surface);
   box-shadow: 0 2px 10px rgba(60, 40, 20, 0.07);
   overflow: hidden;
-  transition: transform 0.12s;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
   &:active { transform: scale(0.985); }
   &::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--sanaa-accent-2); }
   &.is-livree::before { background: var(--sanaa-success, #4caf50); }
@@ -785,7 +787,8 @@ $barre-onglets: 64px;
   color: #fff;
   &--appel { background: var(--sanaa-success, #4caf50); }
   &--route { background: var(--sanaa-accent-2-dark); }
-  &:active { transform: scale(0.92); }
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  &:active { transform: scale(0.95); }
 }
 
 .pastille { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
@@ -894,6 +897,7 @@ $barre-onglets: 64px;
   font-size: 1rem;
   &--appel { background: var(--sanaa-success, #4caf50); }
   &--route { background: var(--sanaa-accent-2-dark); }
+  transition: opacity 120ms ease-out;
   &:active { opacity: 0.85; }
 }
 .adresse { margin-top: 14px; p { margin-bottom: 8px !important; color: var(--sanaa-text-muted); font-size: 0.92rem; } }
@@ -972,7 +976,8 @@ $barre-onglets: 64px;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  &:active { transform: scale(0.98); }
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 120ms ease-out;
+  &:active { transform: scale(0.97); }
   &:disabled { opacity: 0.6; }
   &--ok { flex: 2; background: var(--sanaa-success, #4caf50); color: #fff; }
   &--ko { flex: 2; background: var(--sanaa-danger, #c0392b); color: #fff; }
@@ -981,6 +986,11 @@ $barre-onglets: 64px;
 }
 
 // ---------- transition
-.glisse-enter-active, .glisse-leave-active { transition: transform 0.28s cubic-bezier(0.22, 0.8, 0.3, 1), opacity 0.28s; }
+// La fiche entre en 250 ms et sort plus vite (150 ms) : le système répond sans traîner.
+.glisse-enter-active { transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1), opacity 250ms ease-out; }
+.glisse-leave-active { transition: transform 150ms ease-out, opacity 150ms ease-out; }
 .glisse-enter, .glisse-leave-to { transform: translateY(40px); opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .glisse-enter, .glisse-leave-to { transform: none; }
+}
 </style>

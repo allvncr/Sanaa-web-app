@@ -29,7 +29,9 @@
       </button>
     </aside>
 
-    <div v-if="sidebarOuvertMobile" class="shell__overlay" @click="sidebarOuvertMobile = false" />
+    <transition name="fond">
+      <div v-if="sidebarOuvertMobile" class="shell__overlay" @click="sidebarOuvertMobile = false" />
+    </transition>
 
     <div class="shell__main">
       <header class="shell__topbar">
@@ -152,7 +154,8 @@ export default {
   border-right: 1px solid var(--sanaa-border);
   display: flex;
   flex-direction: column;
-  transition: width 0.2s ease;
+  // Pas d'animation de largeur : elle recalculait toute la page à chaque image
+  // pour un bouton qu'on utilise rarement.
   // Fixée à la hauteur de la fenêtre : le menu défile à l'intérieur et le bouton
   // Réduire/Développer reste toujours visible, quelle que soit la longueur de la page.
   position: sticky;
@@ -178,13 +181,22 @@ export default {
     left: 0;
     z-index: 220;
     transform: translateX(-100%);
-    transition: transform 0.25s ease;
+    transition: transform 250ms cubic-bezier(0.32, 0.72, 0, 1);
     width: 260px;
   }
 }
 
 .sidebar-open-mobile .shell__sidebar {
   @media (max-width: 768px) { transform: translateX(0); }
+}
+
+// Fond sombre du menu mobile : fondu d'entrée 200 ms, sortie plus rapide.
+.fond-enter-active { transition: opacity 200ms ease-out; }
+.fond-leave-active { transition: opacity 150ms ease-out; }
+.fond-enter, .fond-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .shell__sidebar { transition: none; }
+  .fond-enter-active, .fond-leave-active { transition: none; }
 }
 
 .shell__overlay {

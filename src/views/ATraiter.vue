@@ -163,7 +163,7 @@ export default {
   padding: 10px 6px;
   border-top: 1px solid var(--sanaa-border);
   cursor: pointer;
-  &:hover { background: var(--sanaa-bg-alt); }
+  @media (hover: hover) and (pointer: fine) { &:hover { background: var(--sanaa-bg-alt); } }
 }
 .ligne__principal { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ligne__client { font-size: 0.9rem; }

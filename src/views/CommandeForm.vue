@@ -85,7 +85,7 @@
               <span class="ligne-commande__total">{{ ligne.sousTotal | montant }}</span>
               <el-button type="text" icon="el-icon-delete" title="Retirer la ligne" @click="form.lignes.splice(index, 1)" />
             </div>
-            <el-collapse-transition>
+            <transition name="fondu">
             <div v-show="!ligne.replie" class="ligne-commande__corps">
             <template v-if="form.mode === 'stock'">
               <div class="sanaa-grid sanaa-grid--ligne">
@@ -165,7 +165,7 @@
               <span>Sous-total : <strong>{{ ligne.sousTotal | montant }}</strong></span>
             </div>
             </div>
-            </el-collapse-transition>
+            </transition>
           </div>
 
           <p v-if="form.lignes.length === 0" class="sanaa-empty">Ajoutez au moins un produit à la commande.</p>
@@ -177,7 +177,7 @@
             <h3>Avance et réduction <span class="sanaa-text-muted">(optionnel)</span></h3>
             <span v-if="!blocPaiementOuvert && resumePaiement" class="bloc-optionnel__resume">{{ resumePaiement }}</span>
           </button>
-          <el-collapse-transition>
+          <transition name="fondu">
           <div v-show="blocPaiementOuvert" class="sanaa-grid sanaa-grid--form" style="margin-top:14px">
             <div>
               <h3 style="margin-top:0">Avance</h3>
@@ -201,7 +201,7 @@
               <p class="sanaa-text-muted">Déduite du total de la commande pour le calcul du reste à payer.</p>
             </div>
           </div>
-          </el-collapse-transition>
+          </transition>
         </div>
 
         <el-form-item label="Commentaires">

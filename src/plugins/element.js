@@ -10,7 +10,6 @@ import Alert from 'element-ui/lib/alert';
 import Avatar from 'element-ui/lib/avatar';
 import Button from 'element-ui/lib/button';
 import Checkbox from 'element-ui/lib/checkbox';
-import CollapseTransition from 'element-ui/lib/transitions/collapse-transition';
 import DatePicker from 'element-ui/lib/date-picker';
 import Dialog from 'element-ui/lib/dialog';
 import Dropdown from 'element-ui/lib/dropdown';
@@ -49,7 +48,6 @@ locale.use(fr);
   RadioButton, RadioGroup, Select, Switch, TabPane, Table, TableColumn, Tabs, Tag,
   Timeline, TimelineItem, Tooltip,
 ].forEach((composant) => Vue.use(composant));
-Vue.component(CollapseTransition.name, CollapseTransition);
 
 // Directive v-loading et services globaux (this.$confirm, this.$alert…), comme
 // le faisait Vue.use(ElementUI).

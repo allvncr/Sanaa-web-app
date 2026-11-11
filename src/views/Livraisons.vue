@@ -478,7 +478,7 @@ export default {
   transition: background 0.15s, border-color 0.15s;
   @media (max-width: 600px) { min-height: 56px; padding: 4px; }
 
-  &:hover { background: var(--sanaa-accent-1-soft); }
+  @media (hover: hover) and (pointer: fine) { &:hover { background: var(--sanaa-accent-1-soft); } }
   &.is-autre-mois { opacity: 0.45; }
   &.is-aujourdhui .cellule__numero {
     background: var(--sanaa-accent-2);
@@ -543,7 +543,7 @@ export default {
   border-radius: var(--sanaa-radius-md);
   background: var(--sanaa-bg-alt);
   cursor: pointer;
-  &:hover { border-color: var(--sanaa-accent-2); }
+  @media (hover: hover) and (pointer: fine) { &:hover { border-color: var(--sanaa-accent-2); } }
   &.is-orpheline { cursor: default; opacity: 0.8; }
   &.is-livree { border-left: 3px solid var(--sanaa-success); opacity: 0.85; }
 }

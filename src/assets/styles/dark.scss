@@ -29,7 +29,8 @@
     background: var(--sanaa-surface);
     border-color: var(--sanaa-border);
     color: var(--sanaa-text);
-    &:hover, &:focus { background: var(--sanaa-bg-alt); border-color: var(--sanaa-accent-1); color: var(--sanaa-accent-1); }
+    &:focus { background: var(--sanaa-bg-alt); border-color: var(--sanaa-accent-1); color: var(--sanaa-accent-1); }
+    @include survol { background: var(--sanaa-bg-alt); border-color: var(--sanaa-accent-1); color: var(--sanaa-accent-1); }
   }
   .el-button.is-plain.el-button--primary { color: var(--sanaa-accent-2-dark); }
   .el-button.is-disabled, .el-button.is-disabled:hover { background: var(--sanaa-bg-alt) !important; color: #7d7163 !important; }
@@ -62,7 +63,8 @@
   .el-table::before, .el-table--group::after, .el-table--border::after { background-color: var(--sanaa-border); }
   .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell { background: var(--sanaa-bg-alt); }
   .el-table__empty-block, .el-table__empty-text { background: var(--sanaa-surface); color: var(--sanaa-text-muted); }
-  .el-table__body tr.hover-row > td.el-table__cell, .el-table__row:hover > td.el-table__cell { background: var(--sanaa-accent-1-soft) !important; }
+  .el-table__body tr.hover-row > td.el-table__cell { background: var(--sanaa-accent-1-soft) !important; }
+  .el-table__row { @include survol { > td.el-table__cell { background: var(--sanaa-accent-1-soft) !important; } } }
 
   // Menus déroulants, fenêtres, info-bulles
   .el-select-dropdown, .el-popper, .el-dropdown-menu, .el-picker-panel, .el-date-picker, .el-date-range-picker,
@@ -75,7 +77,8 @@
   .el-popper[x-placement^='top'] .popper__arrow::after { border-top-color: var(--sanaa-surface); }
   .el-select-dropdown__item, .el-dropdown-menu__item, .el-picker-panel__shortcut, .el-date-table td span, .el-date-picker__header-label,
   .el-date-table th, .el-month-table td .cell, .el-year-table td .cell { color: var(--sanaa-text); }
-  .el-select-dropdown__item.hover, .el-select-dropdown__item:hover, .el-dropdown-menu__item:hover, .el-dropdown-menu__item:focus { background: var(--sanaa-bg-alt); color: var(--sanaa-accent-1); }
+  .el-select-dropdown__item.hover, .el-dropdown-menu__item:focus { background: var(--sanaa-bg-alt); color: var(--sanaa-accent-1); }
+  .el-select-dropdown__item, .el-dropdown-menu__item { @include survol { background: var(--sanaa-bg-alt); color: var(--sanaa-accent-1); } }
   .el-select-dropdown__item.selected { color: var(--sanaa-accent-1); }
   .el-date-table td.disabled div, .el-date-table td.prev-month, .el-date-table td.next-month { background: transparent; color: #7d7163; }
   .el-picker-panel__footer, .el-date-picker__header--bordered, .el-date-range-picker__content.is-left { border-color: var(--sanaa-border); background: var(--sanaa-surface); }

@@ -357,7 +357,7 @@ export default {
 
 <style lang="scss" scoped>
 .sanaa-grid--produits { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
-.produit-card { cursor: pointer; &:hover { border-color: var(--sanaa-accent-2); } }
+.produit-card { cursor: pointer; @media (hover: hover) and (pointer: fine) { &:hover { border-color: var(--sanaa-accent-2); } } }
 .produit-card__zh { font-size: 0.85rem; margin: 2px 0; color: var(--sanaa-text); }
 .produit-card__sku { color: var(--sanaa-text-muted); font-size: 0.8rem; margin: 4px 0; }
 .is-manquant { color: var(--sanaa-warning); font-style: italic; }

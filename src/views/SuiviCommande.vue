@@ -52,7 +52,7 @@
 
           <div class="suivi__barre">
             <div class="suivi__barre-fond" />
-            <div class="suivi__barre-remplie" :style="{ width: pourcentageProgres + '%' }" />
+            <div class="suivi__barre-remplie" :style="{ transform: 'scaleX(' + pourcentageProgres / 100 + ')' }" />
             <div
               v-for="(e, i) in resultat.etapes"
               :key="e.cle"
@@ -325,7 +325,7 @@ export default {
   border-radius: 4px;
 }
 .suivi__barre-fond { width: 100%; background: var(--sanaa-border); }
-.suivi__barre-remplie { background: var(--sanaa-success, #4caf50); transition: width 0.3s; }
+.suivi__barre-remplie { width: 100%; background: var(--sanaa-success, #4caf50); transform-origin: left; transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1); }
 .suivi__barre-point {
   position: absolute;
   top: 50%;
