@@ -168,7 +168,7 @@
           <div class="sanaa-kpi sanaa-kpi--principal">
             <span class="sanaa-kpi-label">Commandes</span>
             <span class="sanaa-kpi-value">{{ kpisData.nombre_commandes }}</span>
-            <span class="sanaa-kpi-sub">commandes confirmées sur la période</span>
+            <span class="sanaa-kpi-sub">commandes sur la période (hors annulées)</span>
             <span v-if="deltaCommandes" class="sanaa-kpi-delta" :class="classeDeltaCommandes">{{ deltaCommandes }} {{ libelleComparaison }}</span>
             <Sparkline :valeurs="valeursCommandes" :couleur="COULEURS.commandes" />
           </div>
