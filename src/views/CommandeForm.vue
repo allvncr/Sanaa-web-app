@@ -447,6 +447,9 @@ export default {
           canal_vente: this.form.canal_vente,
           commentaires: this.form.commentaires,
           reduction: this.form.reduction || 0,
+          // Une commande saisie est « Nouvelle » : elle est vérifiée en fin de journée,
+          // puis confirmée (retour du 13/11/2026).
+          statut_commande: 'Nouvelle',
           lignes: this.form.lignes.map((l) => ({
             produit_id: l.produit_id,
             variante_id: l.variante_id,
@@ -460,7 +463,7 @@ export default {
 
         const { data } = await commandesApi.creer(payload);
         this.compteurSession += 1;
-        this.$store.dispatch('notifications/succes', `Commande ${data.data.numero} enregistrée.`);
+        this.$store.dispatch('notifications/succes', `Commande ${data.data.numero} enregistrée : à vérifier puis confirmer.`);
 
         // Retour V0.1 : on reste sur l'écran, pays conservé, prêt pour la
         // commande suivante — c'est l'action la plus répétitive de l'app.

@@ -18,6 +18,9 @@
         @input="chargerDiffere"
         @clear="chargerDepuisFiltre"
       />
+      <el-select v-model="filtres.statut" placeholder="Statut" clearable size="small" style="width: 170px" @change="chargerDepuisFiltre">
+        <el-option v-for="(libelle, val) in statutsCommande" :key="val" :value="val" :label="avecCompteur(libelle, 'commande', val)" />
+      </el-select>
       <el-select v-model="filtres.creePar" placeholder="Saisi par" clearable filterable size="small" style="width: 190px" @change="chargerDepuisFiltre">
         <el-option v-for="u in createurs" :key="u._id" :value="u._id" :label="`${u.nom} (${u.total})`" />
       </el-select>
@@ -40,6 +43,14 @@
       <el-button size="small" icon="el-icon-refresh" @click="charger">Actualiser</el-button>
     </div>
 
+    <div v-if="nbAVerifier > 0 && filtres.statut !== 'Nouvelle'" class="sanaa-card bandeau-verification">
+      <span>
+        <strong>{{ nbAVerifier }}</strong> commande{{ nbAVerifier > 1 ? 's' : '' }} à vérifier : tant qu'elle{{ nbAVerifier > 1 ? 's ne sont' : ' n\'est' }} pas confirmée{{ nbAVerifier > 1 ? 's' : '' }},
+        elle{{ nbAVerifier > 1 ? 's ne partent' : ' ne part' }} pas dans la fiche usine.
+      </span>
+      <el-button size="small" type="primary" @click="voirAVerifier">Voir les commandes à vérifier</el-button>
+    </div>
+
     <div v-if="pastilles.length" class="sanaa-filtres-actifs">
       <span v-for="p in pastilles" :key="p.cle" class="sanaa-filtre-pastille">
         {{ p.texte }}
@@ -50,6 +61,9 @@
 
     <div v-if="selection.length > 0" class="sanaa-card barre-lot">
       <span><strong>{{ selection.length }}</strong> commande{{ selection.length > 1 ? 's' : '' }} sélectionnée{{ selection.length > 1 ? 's' : '' }}</span>
+      <el-select v-model="lot.statut_commande" placeholder="Commande : ne pas changer" clearable size="small" style="width:220px">
+        <el-option value="Confirmee" label="Confirmer la commande" />
+      </el-select>
       <el-select v-model="lot.statut_fabrication" placeholder="Fabrication : ne pas changer" clearable size="small" style="width:220px">
         <el-option v-for="(libelle, val) in statutsFabrication" :key="val" :value="val" :label="libelle" />
       </el-select>
@@ -59,7 +73,7 @@
       <el-button
         size="small"
         type="primary"
-        :disabled="!lot.statut_fabrication && !lot.statut_livraison"
+        :disabled="!lot.statut_commande && !lot.statut_fabrication && !lot.statut_livraison"
         :loading="applicationLot"
         @click="appliquerLot"
       >
@@ -180,14 +194,14 @@ export default {
     return {
       chargement: false,
       commandes: [],
-      filtres: { q: '', creePar: '', fabrication: '', livraison: '', plage: [] },
+      filtres: { q: '', statut: '', creePar: '', fabrication: '', livraison: '', plage: [] },
       compteurs: { commande: {}, fabrication: {}, livraison: {} },
       pagination: { page: 1, limite: 20, total: 0 },
       createurs: [],
       minuterie: null,
       requete: 0,
       selection: [],
-      lot: { statut_fabrication: '', statut_livraison: '' },
+      lot: { statut_commande: '', statut_fabrication: '', statut_livraison: '' },
       applicationLot: false,
       statutsCommande: this.$i18n.messages.fr.statuts.commande,
       statutsFabrication: this.$i18n.messages.fr.statuts.fabrication,
@@ -197,10 +211,15 @@ export default {
   computed: {
     ...mapState('paysContexte', { paysActifId: 'paysActifId' }),
     // Filtres actifs sous forme de pastilles retirables d'un clic.
+    // Commandes « Nouvelle » (pas encore vérifiées), selon les autres filtres actifs.
+    nbAVerifier() {
+      return (this.compteurs.commande && this.compteurs.commande.Nouvelle) || 0;
+    },
     pastilles() {
       const f = this.filtres;
       const liste = [];
       if (f.q) liste.push({ cle: 'q', texte: `Recherche : ${f.q}` });
+      if (f.statut) liste.push({ cle: 'statut', texte: `Statut : ${this.statutsCommande[f.statut] || f.statut}` });
       if (f.creePar) {
         const u = this.createurs.find((c) => c._id === f.creePar);
         liste.push({ cle: 'creePar', texte: `Saisi par ${u ? u.nom : '…'}` });
@@ -237,6 +256,7 @@ export default {
       const q = this.$route.query;
       this.filtres = {
         q: q.q || '',
+        statut: q.statut || '',
         creePar: q.cree_par || '',
         fabrication: q.fabrication || '',
         livraison: q.livraison || '',
@@ -252,6 +272,7 @@ export default {
       const [date_de, date_a] = this.filtres.plage && this.filtres.plage.length ? this.filtres.plage : [undefined, undefined];
       const query = {};
       if (this.filtres.q) query.q = this.filtres.q;
+      if (this.filtres.statut) query.statut = this.filtres.statut;
       if (this.filtres.creePar) query.cree_par = this.filtres.creePar;
       if (this.filtres.fabrication) query.fabrication = this.filtres.fabrication;
       if (this.filtres.livraison) query.livraison = this.filtres.livraison;
@@ -280,7 +301,11 @@ export default {
       this.chargerDepuisFiltre();
     },
     effacerFiltres() {
-      this.filtres = { q: '', creePar: '', fabrication: '', livraison: '', plage: [] };
+      this.filtres = { q: '', statut: '', creePar: '', fabrication: '', livraison: '', plage: [] };
+      this.chargerDepuisFiltre();
+    },
+    voirAVerifier() {
+      this.filtres = { ...this.filtres, statut: 'Nouvelle' };
       this.chargerDepuisFiltre();
     },
     async chargerCreateurs() {
@@ -335,6 +360,7 @@ export default {
       const criteres = {
         pays_id: this.paysActifId || undefined,
         q: this.filtres.q ? this.filtres.q.trim() : undefined,
+        statut: this.filtres.statut || undefined,
         cree_par: this.filtres.creePar || undefined,
         statut_fabrication: this.filtres.fabrication || undefined,
         statut_livraison: this.filtres.livraison || undefined,
@@ -371,11 +397,12 @@ export default {
     viderSelection() {
       this.$refs.tableau && this.$refs.tableau.clearSelection();
       this.selection = [];
-      this.lot = { statut_fabrication: '', statut_livraison: '' };
+      this.lot = { statut_commande: '', statut_fabrication: '', statut_livraison: '' };
     },
     async appliquerLot() {
-      const noms = { ...this.statutsFabrication, ...this.statutsLivraison };
+      const noms = { ...this.statutsCommande, ...this.statutsFabrication, ...this.statutsLivraison };
       const changements = [
+        this.lot.statut_commande && `Commande → ${noms[this.lot.statut_commande]}`,
         this.lot.statut_fabrication && `Fabrication → ${noms[this.lot.statut_fabrication]}`,
         this.lot.statut_livraison && `Livraison → ${noms[this.lot.statut_livraison]}`,
       ].filter(Boolean).join(' · ');
@@ -418,6 +445,17 @@ export default {
 <style lang="scss" scoped>
 .el-table ::v-deep .el-table__row { cursor: pointer; }
 .recherche { width: 340px; max-width: 100%; }
+.bandeau-verification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  background: var(--sanaa-accent-1-soft);
+  border-color: var(--sanaa-accent-1);
+  font-size: 0.9rem;
+}
 .btn-whatsapp-ligne { color: #25D366; font-size: 1.25rem; padding: 0; }
 .carte-commande {
   margin-bottom: 10px;

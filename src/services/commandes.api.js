@@ -28,8 +28,8 @@ export default {
   historique(id) {
     return api.get(`/commandes/${id}/historique`);
   },
-  modifierStatutsEnLot(ids, { statut_fabrication, statut_livraison } = {}) {
-    return api.patch('/commandes/statuts-lot', { ids, statut_fabrication, statut_livraison });
+  modifierStatutsEnLot(ids, { statut_commande, statut_fabrication, statut_livraison } = {}) {
+    return api.patch('/commandes/statuts-lot', { ids, statut_commande, statut_fabrication, statut_livraison });
   },
   changerStatutCommande(id, statut) {
     return api.patch(`/commandes/${id}/statut-commande`, { statut });

@@ -397,7 +397,7 @@ export default {
           limite: 20,
         });
         if (numeroRequete === this.requeteRecherche) {
-          this.resultats = data.data.filter((c) => !['Annulee', 'Refusee'].includes(c.statut_commande));
+          this.resultats = data.data.filter((c) => !['Nouvelle', 'Annulee', 'Refusee'].includes(c.statut_commande));
         }
       } finally {
         if (numeroRequete === this.requeteRecherche) this.rechercheEnCours = false;

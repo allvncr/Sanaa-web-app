@@ -8,6 +8,11 @@ export default {
   genererUsine(paysId, date) {
     return api.post('/exports/usine', null, { params: { pays_id: paysId, date } });
   },
+  // Combien de commandes du jour partiraient dans la fiche usine (confirmées) et
+  // combien attendent encore leur vérification (nouvelles).
+  apercu(paysId, date) {
+    return api.get('/exports/apercu', { params: { pays_id: paysId, date } });
+  },
   lister(params) {
     return api.get('/exports', { params });
   },

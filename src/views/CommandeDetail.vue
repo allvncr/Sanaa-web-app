@@ -7,7 +7,28 @@
           <el-button icon="el-icon-chat-dot-round" class="btn-whatsapp" @click="envoyerWhatsApp">Envoyer sur WhatsApp</el-button>
           <el-button icon="el-icon-link" @click="copierLienSuivi">Lien de suivi client</el-button>
           <el-button v-can="'commandes:modifier'" type="primary" icon="el-icon-edit" @click="dialogueEdition = true">Modifier</el-button>
-          <el-button v-can="'commandes:supprimer'" type="danger" plain icon="el-icon-delete" :loading="suppression" @click="supprimerCommande">Supprimer</el-button>
+          <el-button
+            v-if="commande.statut_commande === 'Nouvelle'"
+            v-can="'commandes:changer_statut'"
+            type="success"
+            icon="el-icon-circle-check"
+            @click="changerStatutCommande('Confirmee')"
+          >
+            Confirmer la commande
+          </el-button>
+          <!-- On n'efface jamais une commande active : il faut d'abord l'annuler. -->
+          <el-button
+            v-can="'commandes:supprimer'"
+            type="danger"
+            plain
+            icon="el-icon-delete"
+            :loading="suppression"
+            :disabled="!supprimable"
+            :title="supprimable ? '' : 'Annulez d\'abord la commande pour pouvoir la supprimer'"
+            @click="supprimerCommande"
+          >
+            Supprimer
+          </el-button>
           <el-button icon="el-icon-back" @click="retour">{{ $route.query.retour === 'livraisons' ? 'Retour aux livraisons' : 'Retour' }}</el-button>
         </div>
       </div>
@@ -284,6 +305,10 @@ export default {
     transitionsCommande() {
       return this.commande ? TRANSITIONS[this.commande.statut_commande] || [] : [];
     },
+    // Seule une commande annulée (ou refusée) peut être supprimée.
+    supprimable() {
+      return !!this.commande && ['Annulee', 'Refusee'].includes(this.commande.statut_commande);
+    },
     jalons() {
       if (!this.commande) return [];
       const champs = [
@@ -385,9 +410,21 @@ export default {
       }
     },
     async changerStatutCommande(statut) {
+      if (statut === 'Annulee') {
+        try {
+          await this.$confirm(
+            `Annuler la commande ${this.commande.numero} ? Elle ne partira plus dans les exports et ne comptera plus dans le chiffre d'affaires. Vous pourrez ensuite la supprimer si besoin.`,
+            'Annulation de la commande',
+            { type: 'warning', confirmButtonText: 'Annuler la commande', cancelButtonText: 'Retour' }
+          );
+        } catch (e) {
+          this.nouveauStatutCommande = '';
+          return;
+        }
+      }
       try {
         await commandesApi.changerStatutCommande(this.id, statut);
-        this.$store.dispatch('notifications/succes', 'Statut mis à jour.');
+        this.$store.dispatch('notifications/succes', statut === 'Confirmee' ? 'Commande confirmée.' : 'Statut mis à jour.');
         await this.charger();
       } catch (err) {
         this.$store.dispatch('notifications/erreur', err.response?.data?.error?.message || 'Transition refusée');
